@@ -9,11 +9,12 @@ export function SettingsView({ state }: { state: AppState }): React.JSX.Element 
   const [name, setName] = useState(s.displayName)
   const [avatar, setAvatar] = useState(s.avatar)
   const [key, setKey] = useState('')
+  const [wsId, setWsId] = useState(s.anthropicWorkspaceId ?? '')
   const [toast, setToast] = useState<string | null>(null)
   const [editing, setEditing] = useState<{ p: Provider; preset: ProviderPreset; key: string } | null>(null)
   const [testResult, setTestResult] = useState<Record<string, string>>({})
 
-  useEffect(() => { setName(s.displayName); setAvatar(s.avatar) }, [s.displayName, s.avatar])
+  useEffect(() => { setName(s.displayName); setAvatar(s.avatar); setWsId(s.anthropicWorkspaceId ?? '') }, [s.displayName, s.avatar, s.anthropicWorkspaceId])
 
   const flash = (t: string): void => { setToast(t); setTimeout(() => setToast(null), 2200) }
   const saveProfile = async (): Promise<void> => { await window.nudge.saveSettings({ displayName: name.trim() || 'Ben', avatar }); flash('Profil kaydedildi') }
@@ -49,6 +50,11 @@ export function SettingsView({ state }: { state: AppState }): React.JSX.Element 
               <label>Anthropic API anahtarı</label>
               <input type="password" value={key} onChange={e => setKey(e.target.value)} placeholder="sk-ant-api03-…" />
               <span className="help">console.anthropic.com → API Keys. Bu bilgisayarda şifreli saklanır.</span>
+            </div>
+            <div className="field">
+              <label>Workspace ID (isteğe bağlı)</label>
+              <input value={wsId} onChange={e => setWsId(e.target.value)} onBlur={() => { if ((s.anthropicWorkspaceId ?? '') !== wsId.trim()) { window.nudge.saveSettings({ anthropicWorkspaceId: wsId.trim() }); flash('Workspace ID kaydedildi') } }} placeholder="wrkspc_…" />
+              <span className="help">"API key is not scoped to a workspace" hatası alırsan: console.anthropic.com → Settings → Workspaces → çalışma alanı → ID. Ya da anahtarı doğrudan bir çalışma alanı içinde oluştur, bu alan boş kalabilir.</span>
             </div>
             <div className="actions">
               {s.hasApiKey && <button className="btn ghost danger" onClick={async () => { await window.nudge.clearApiKey(); flash('Anahtar silindi') }}>Anahtarı sil</button>}

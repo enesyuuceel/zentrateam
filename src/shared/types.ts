@@ -82,6 +82,7 @@ export interface Settings {
   permissionMode: 'acceptEdits' | 'bypassPermissions' | 'default'
   sounds: boolean
   hasApiKey: boolean       // Claude (Anthropic) anahtarı
+  anthropicWorkspaceId?: string   // Anahtar çalışma alanına bağlı değilse gerekli (wrkspc_…)
   authMode: 'apiKey' | 'claudeLogin'
 }
 

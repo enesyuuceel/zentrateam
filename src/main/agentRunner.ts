@@ -116,6 +116,7 @@ export class AgentRunner {
     const apiKey = store.getApiKey()
     const env: Record<string, string | undefined> = { ...process.env }
     if (apiKey) env.ANTHROPIC_API_KEY = apiKey
+    if (settings.anthropicWorkspaceId?.trim()) env.ANTHROPIC_CUSTOM_HEADERS = `anthropic-workspace-id: ${settings.anthropicWorkspaceId.trim()}`
 
     const mcpServers: Record<string, McpServerConfig> = {}
     for (const c of store.connections.filter(c => c.enabled)) {
