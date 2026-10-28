@@ -21,9 +21,9 @@ export function Sidebar({ state, presence, activeId, onOpen }: Props): React.JSX
     const c = await window.nudge.createConversation({ kind: 'team', projectPath: null, title: `Takım Odası ${teams.length + 1}` })
     onOpen(c.id)
   }
-  // Ajana tıklayınca varsa mevcut sohbet açılır; yeni sohbet için + düğmesi
-  const openDirect = async (a: Agent, forceNew = false): Promise<void> => {
-    const existing = forceNew ? undefined : directs.find(c => c.agentId === a.id)
+  // Ajana tıklayınca varsa mevcut sohbet açılır, yoksa bir tane oluşturulur
+  const openDirect = async (a: Agent): Promise<void> => {
+    const existing = directs.find(c => c.agentId === a.id)
     if (existing) { onOpen(existing.id); return }
     const n = directs.filter(c => c.agentId === a.id).length
     const c = await window.nudge.createConversation({ kind: 'direct', agentId: a.id, projectPath: null, title: n ? `${a.name} ${n + 1}` : undefined })
@@ -80,7 +80,6 @@ export function Sidebar({ state, presence, activeId, onOpen }: Props): React.JSX
                 <Avatar agent={a} size={24} />
                 <span className="lbl">{a.name}{a.isLead ? ' ·  lider' : ''}<small>{st ?? a.role}</small></span>
                 <span className={`dot ${p}`} />
-                <button className="x" title="Yeni sohbet aç" onClick={e => { e.stopPropagation(); openDirect(a, true) }}>+</button>
               </div>
             )
           })}
