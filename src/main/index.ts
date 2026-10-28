@@ -4,7 +4,8 @@ import { readFileSync } from 'fs'
 import { store } from './store'
 import { AgentRunner, stripFrontmatter } from './agentRunner'
 import { testProvider } from './openaiAgent'
-import { listClaudeSessions } from './claudeSessions'
+import { listClaudeSessions, transcriptToHistory } from './claudeSessions'
+import { saveHistory } from './openaiAgent'
 import { randomUUID } from 'crypto'
 import type { AgentEvent } from '../shared/types'
 
@@ -73,10 +74,26 @@ ipcMain.handle('conv:updateTeam', (_e, id: string, input: { title: string; membe
   return store.updateConversation(id, { ...input, ...(leadChanged ? { sessionId: null } : {}) })
 })
 ipcMain.handle('claude:sessions', (_e, p: string) => listClaudeSessions(p))
-ipcMain.handle('conv:attachSession', (_e, id: string, sessionId: string, title: string) => {
+ipcMain.handle('conv:attachSession', async (_e, id: string, sessionId: string, title: string) => {
   runner.cancel(id)
-  const c = store.updateConversation(id, { sessionId })
-  const msg = { id: randomUUID(), from: 'system' as const, text: `Claude Code sohbeti bağlandı: "${title}". Ajan bu konuşmayı hatırlayarak devam eder.`, at: Date.now() }
+  const conv = store.getConversation(id)
+  if (!conv) throw new Error('Sohbet bulunamadı')
+  const agent = conv.agentId ? store.getAgent(conv.agentId) : undefined
+  let note: string
+  let c
+  if (!agent || agent.provider === 'claude') {
+    // Claude: aynı oturum doğrudan sürdürülür
+    c = store.updateConversation(id, { sessionId })
+    note = `Claude Code sohbeti bağlandı: "${title}". Ajan bu konuşmayı hatırlayarak devam eder.`
+  } else {
+    // Diğer sağlayıcılar: transkript metin olarak ajanın geçmişine aktarılır
+    const history = await transcriptToHistory(conv.projectPath ?? '', sessionId)
+    const key = randomUUID()
+    saveHistory(store.userDataDir, key, history)
+    c = store.updateConversation(id, { sessionId: key })
+    note = `Claude Code sohbeti aktarıldı: "${title}" (${history.length} mesaj ${agent.name} ajanının hafızasına yüklendi). Kaldığı yerden devam eder.`
+  }
+  const msg = { id: randomUUID(), from: 'system' as const, text: note, at: Date.now() }
   store.appendMessage(id, msg)
   send('agent:event', { type: 'message', conversationId: id, message: msg } satisfies AgentEvent)
   return c

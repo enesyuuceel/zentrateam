@@ -49,7 +49,7 @@ export function SessionPicker({ projectPath, onClose, onPick }: Props): React.JS
           ))}
         </div>
         <div className="modal-foot">
-          <span style={{ flex: 1, color: 'var(--muted)', fontSize: 11.5, alignSelf: 'center' }}>Bağlanan sohbetin tüm bağlamı ajana geçer; bu sohbetteki mesaj geçmişin olduğu gibi kalır.</span>
+          <span style={{ flex: 1, color: 'var(--muted)', fontSize: 11.5, alignSelf: 'center' }}>Claude ajanı aynı oturumu sürdürür; diğer yapay zekalar sohbetin metnini hafızalarına alır. Bu penceredeki mesajların olduğu gibi kalır.</span>
           <button className="btn ghost" onClick={onClose}>Kapat</button>
         </div>
       </div>

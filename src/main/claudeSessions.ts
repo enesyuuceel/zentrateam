@@ -54,3 +54,41 @@ export async function listClaudeSessions(projectPath: string): Promise<ClaudeSes
   }
   return out.sort((a, b) => b.lastAt.localeCompare(a.lastAt))
 }
+
+/**
+ * Claude Code transkriptini, Claude dışı ajanların kullandığı OpenAI-uyumlu geçmişe çevirir.
+ * Yalnızca metin alınır (araç çağrıları atlanır), ardışık aynı roller birleştirilir, son kısım bütçeye sığdırılır.
+ */
+export async function transcriptToHistory(projectPath: string, sessionId: string, maxChars = 120_000): Promise<Array<{ role: 'user' | 'assistant'; content: string }>> {
+  const file = join(claudeProjectsDir(), encodeProjectPath(projectPath), `${sessionId}.jsonl`)
+  if (!existsSync(file)) return []
+  const msgs: Array<{ role: 'user' | 'assistant'; content: string }> = []
+  const push = (role: 'user' | 'assistant', text: string): void => {
+    const t = text.trim()
+    if (!t) return
+    const last = msgs[msgs.length - 1]
+    if (last && last.role === role) last.content += '\n\n' + t
+    else msgs.push({ role, content: t })
+  }
+  const rl = createInterface({ input: createReadStream(file, { encoding: 'utf8' }) })
+  for await (const line of rl) {
+    if (!line) continue
+    let j: { type?: string; message?: { role?: string; content?: unknown } }
+    try { j = JSON.parse(line) } catch { continue }
+    if (j.type !== 'user' && j.type !== 'assistant') continue
+    const c = j.message?.content
+    let text = ''
+    if (typeof c === 'string') text = c
+    else if (Array.isArray(c)) text = c.filter((x): x is { type: string; text: string } => !!x && typeof x === 'object' && (x as { type?: string }).type === 'text').map(x => x.text).join('\n')
+    if (!text.trim() || text.startsWith('<')) continue
+    push(j.type, text.length > 6000 ? text.slice(0, 6000) + '\n…[kısaltıldı]' : text)
+  }
+  // Bütçeye sığdır: sondan geriye
+  let total = 0
+  let i = msgs.length
+  while (i > 0 && total + msgs[i - 1].content.length <= maxChars) { total += msgs[i - 1].content.length; i-- }
+  const kept = msgs.slice(i)
+  if (kept.length && kept[0].role === 'assistant') kept.unshift({ role: 'user', content: '(önceki mesajlar)' })
+  if (i > 0) kept.unshift({ role: 'user', content: `[Aktarılan Claude Code sohbeti. Daha eski ${i} mesaj yer kısıtı nedeniyle alınmadı; bu bağlamla devam et.]` }, { role: 'assistant', content: 'Anladım, aktarılan konuşmayı okudum; kaldığımız yerden devam ediyorum.' })
+  return kept
+}

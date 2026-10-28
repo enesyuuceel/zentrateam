@@ -187,7 +187,7 @@ export function ChatView({ state, presence, conversationId, onOpen, onEditTeam }
         )}
         <span className={`chip ${conv.projectPath ? '' : 'warn'}`} onClick={pickProject} title={conv.projectPath ?? 'Proje klasörü seç'}>📁 {baseName(conv.projectPath)}</span>
         <span className={`chip muted ${conv.sessionId ? 'ok' : ''}`} title={conv.sessionId ? 'Ajan önceki mesajları hatırlıyor' : 'İlk mesajla oturum açılır'}>{conv.sessionId ? '● oturum sürüyor' : '○ yeni oturum'}</span>
-        {conv.projectPath && lead?.provider === 'claude' && <button className="ibtn" title="Bu projenin Claude Code sohbet geçmişini bağla" onClick={() => setPickSession(true)}>📜</button>}
+        {conv.projectPath && conv.kind === 'direct' && <button className="ibtn" title="Bu projenin Claude Code sohbet geçmişini bağla" onClick={() => setPickSession(true)}>📜</button>}
         <button className="ibtn" title="Ajanın hafızasını sıfırla" onClick={reset}>↺</button>
         {conv.projectPath && <button className="ibtn" title="Klasörü aç" onClick={() => window.nudge.openPath(conv.projectPath!)}>↗</button>}
       </div>
@@ -202,7 +202,7 @@ export function ChatView({ state, presence, conversationId, onOpen, onEditTeam }
               : lead?.persona.split('.').slice(0, 2).join('.') + '.'}</p>
             <div className="grid">
               {SUGGESTIONS.map(s => <button key={s.t} onClick={() => setDraft(s.d)}><b>{s.t}</b>{s.d}</button>)}
-              {conv.projectPath && lead?.provider === 'claude' && <button onClick={() => setPickSession(true)}><b>📜 Geçmişi bağla</b>Bu projede daha önce Claude Code ile yaptığın sohbetten devam et.</button>}
+              {conv.projectPath && conv.kind === 'direct' && <button onClick={() => setPickSession(true)}><b>📜 Geçmişi bağla</b>Bu projede daha önce Claude Code ile yaptığın sohbetten devam et.</button>}
             </div>
           </div>
         )}

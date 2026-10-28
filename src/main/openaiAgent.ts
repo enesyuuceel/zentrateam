@@ -281,6 +281,6 @@ export function loadHistory(userData: string, key: string): OaiMessage[] {
   try { return JSON.parse(readFileSync(p, 'utf8')) as OaiMessage[] } catch { return [] }
 }
 export function saveHistory(userData: string, key: string, h: OaiMessage[]): void {
-  // Bağlamı sınırlı tut: son 60 mesaj
-  writeFileSync(historyPath(userData, key), JSON.stringify(h.slice(-60), null, 1), 'utf8')
+  // Bağlamı sınırlı tut: son 120 mesaj
+  writeFileSync(historyPath(userData, key), JSON.stringify(h.slice(-120), null, 1), 'utf8')
 }
