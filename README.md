@@ -30,6 +30,7 @@ Windows kurulum paketi: [Releases](https://github.com/enesyuuceel/zentrateam/rel
 - **Kendi logosu:** Ajana PNG/JPG/SVG logo yükle.
 - **Takım Odası:** Lider ajan işi böler, diğer Claude ajanlarına alt görev olarak dağıtır, raporları birleştirir.
 - **Bağlantılar (MCP):** GitHub, Google Drive, ek klasör, özel MCP. Claude ajanlarına araç olarak verilir.
+- **Claude Code geçmişini bağla:** Projede daha önce Claude Code ile yaptığın sohbetler (bilgisayardaki `~/.claude/projects` kayıtları) listelenir; birini seçince ajan o konuşmanın tamamını hatırlayarak devam eder.
 - **Kalıcı oturum:** Claude ajanlarında Agent SDK oturumu, diğerlerinde yerel geçmiş dosyası. Proje klasörü değişince ya da "yeni oturum" deyince sıfırlanır.
 - **Tek sohbet:** Ajana tıklayınca mevcut sohbet açılır; yeni bir tane için yanındaki **+**.
 
