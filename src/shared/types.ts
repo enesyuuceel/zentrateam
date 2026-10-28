@@ -95,6 +95,8 @@ export interface NudgeApi {
   openChat(conversationId: string): Promise<void>
   createConversation(input: { kind: 'direct' | 'team'; agentId?: string; memberIds?: string[]; projectPath: string | null; title?: string }): Promise<Conversation>
   deleteConversation(id: string): Promise<void>
+  renameConversation(id: string, title: string): Promise<Conversation>
+  openPath(path: string): Promise<string>
   setProjectPath(conversationId: string, path: string | null): Promise<Conversation>
   pickFolder(): Promise<string | null>
   sendMessage(conversationId: string, text: string): Promise<void>
@@ -107,6 +109,7 @@ export interface NudgeApi {
   deleteConnection(id: string): Promise<Connection[]>
   openWindow(route: 'connections' | 'settings' | 'agents'): Promise<void>
   onEvent(cb: (e: AgentEvent) => void): () => void
+  onNav(cb: (n: { view: string; id?: string }) => void): () => void
   onStateChanged(cb: (s: AppState) => void): () => void
   windowControl(action: 'minimize' | 'close' | 'maximize'): void
 }

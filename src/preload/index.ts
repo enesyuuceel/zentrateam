@@ -10,6 +10,8 @@ const api: NudgeApi = {
   openChat: (id) => ipcRenderer.invoke('chat:open', id),
   createConversation: (input) => ipcRenderer.invoke('conv:create', input),
   deleteConversation: (id) => ipcRenderer.invoke('conv:delete', id),
+  renameConversation: (id, title) => ipcRenderer.invoke('conv:rename', id, title),
+  openPath: (p) => ipcRenderer.invoke('shell:openPath', p),
   setProjectPath: (id, path) => ipcRenderer.invoke('conv:setProject', id, path),
   pickFolder: () => ipcRenderer.invoke('dialog:pickFolder'),
   sendMessage: (id, text) => ipcRenderer.invoke('chat:send', id, text),
@@ -25,6 +27,11 @@ const api: NudgeApi = {
     const handler = (_: unknown, e: AgentEvent): void => cb(e)
     ipcRenderer.on('agent:event', handler)
     return () => ipcRenderer.removeListener('agent:event', handler)
+  },
+  onNav: (cb) => {
+    const handler = (_: unknown, n: { view: string; id?: string }): void => cb(n)
+    ipcRenderer.on('nav', handler)
+    return () => ipcRenderer.removeListener('nav', handler)
   },
   onStateChanged: (cb) => {
     const handler = (_: unknown, s: AppState): void => cb(s)

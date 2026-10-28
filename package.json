@@ -1,7 +1,7 @@
 {
   "name": "nudge",
   "productName": "Nudge",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Ajan takımınla mesajlaşarak proje geliştir. Eski messenger ruhu, yeni nesil ajanlar.",
   "main": "./out/main/index.js",
   "author": "Zentra Engine",
