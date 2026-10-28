@@ -139,26 +139,64 @@ async function screenshotMode(dir: string): Promise<void> {
     const img = await mainWindow!.webContents.capturePage()
     writeFileSync(join(dir, `${name}.png`), img.toPNG())
   }
-  const agent = store.agents[0]
-  const demo = store.createConversation({ kind: 'direct', agentId: agent.id, projectPath: 'C:\\Users\\Enes\\Desktop\\Nudge', title: '__demo__' })
+  const A = (id: string): string => store.getAgent(id)?.id ?? store.agents[0].id
   const now = Date.now()
-  store.appendMessage(demo.id, { id: 'd1', from: 'me', text: 'Selam Mimar, README dosyasını gözden geçirip eksikleri yazar mısın?', at: now - 60000 })
-  store.appendMessage(demo.id, {
-    id: 'd2', from: 'agent', agentId: agent.id, at: now - 20000, costUsd: 0.042,
-    text: 'Baktım. README kurulum adımlarını anlatıyor ama **Bağlantılar** bölümü eksik.\n\nÖnerim:\n- "Bağlantılar" başlığı altında GitHub ve Google kurulumunu anlat\n- Ekran görüntüsü ekle\n\nİstersen Yazıcı\'ya devredebilirim.',
-    activities: [{ tool: 'Read', detail: 'okuyor: README.md', at: now - 40000 }, { tool: 'Glob', detail: 'dosya arıyor: docs/**', at: now - 35000 }]
+  const proj = ['C:', 'Projeler', 'zentra-web'].join('\\')
+  store.saveSettings({ displayName: 'Enes', avatar: '🧑‍💻' })
+  store.setApiKey('demo-key')
+  store.saveProvider({ id: 'demo-ollama', kind: 'ollama', name: 'Ollama', baseUrl: 'http://localhost:11434/v1', defaultModel: 'llama3.1', hasKey: false })
+
+  // Birebir sohbet: Usta ile
+  const d1 = store.createConversation({ kind: 'direct', agentId: A('usta'), projectPath: proj })
+  store.appendMessage(d1.id, { id: 'a1', from: 'me', text: 'Giriş sayfasına "Şifremi unuttum" akışı ekle. E-posta ile sıfırlama linki gitsin.', at: now - 540000 })
+  store.appendMessage(d1.id, {
+    id: 'a2', from: 'agent', agentId: A('usta'), at: now - 420000, costUsd: 0.183,
+    text: 'Bitti. Yaptıklarım:\n- `src/pages/ForgotPassword.tsx` yeni sayfa, form ve doğrulama\n- `src/api/auth.ts` içine `requestReset(email)` eklendi\n- `server/routes/auth.js` → `/auth/reset` uç noktası, 15 dk geçerli token\n- Giriş sayfasına "Şifremi unuttum" bağlantısı\n\n`npm test` geçti (14/14). E-posta şablonu şimdilik düz metin, istersen Yazıcı güzelleştirsin.',
+    activities: [
+      { tool: 'Read', detail: 'okuyor: src/pages/Login.tsx', at: now - 500000 },
+      { tool: 'Write', detail: 'yazıyor: src/pages/ForgotPassword.tsx', at: now - 480000 },
+      { tool: 'Edit', detail: 'düzenliyor: src/api/auth.ts', at: now - 470000 },
+      { tool: 'Edit', detail: 'düzenliyor: server/routes/auth.js', at: now - 460000 },
+      { tool: 'Bash', detail: 'komut çalıştırıyor: npm test', at: now - 440000 }
+    ]
   })
-  store.appendMessage(demo.id, { id: 'd3', from: 'me', text: 'Evet, Yazıcı yazsın. Sen de package.json sürümünü 0.3.0 yap.', at: now - 5000 })
-  send('nav', { view: 'chat', id: demo.id })
-  await snap('chat')
+  store.appendMessage(d1.id, { id: 'a3', from: 'me', text: 'Süper. Token süresini 30 dakika yap ve sıfırlama sonrası otomatik giriş olsun.', at: now - 60000 })
+  store.appendMessage(d1.id, {
+    id: 'a4', from: 'agent', agentId: A('usta'), at: now - 20000, costUsd: 0.061,
+    text: 'Tamam:\n- Token süresi 30 dk oldu (`TOKEN_TTL_MIN = 30`)\n- Başarılı sıfırlamada oturum açılıp `/dashboard`a yönlendiriliyor\n\nTestler yeşil.',
+    activities: [{ tool: 'Edit', detail: 'düzenliyor: server/routes/auth.js', at: now - 40000 }, { tool: 'Edit', detail: 'düzenliyor: src/pages/ForgotPassword.tsx', at: now - 35000 }, { tool: 'Bash', detail: 'komut çalıştırıyor: npm test', at: now - 25000 }]
+  })
+
+  // Takım odası
+  const t1 = store.createConversation({ kind: 'team', projectPath: proj, title: 'Ödeme sayfası yenileme', memberIds: [A('mimar'), A('usta'), A('kontrolcu'), A('yazici')], leadId: A('mimar') })
+  store.appendMessage(t1.id, { id: 't1', from: 'me', text: 'Ödeme sayfasını yenileyelim: adım adım sihirbaz, kart ve havale seçeneği, mobilde düzgün görünsün.', at: now - 900000 })
+  store.appendMessage(t1.id, {
+    id: 't2', from: 'agent', agentId: A('mimar'), at: now - 300000, costUsd: 1.24,
+    text: 'Planı 3 parçaya böldüm ve dağıttım.\n\n**Usta:** `Checkout` 3 adımlı sihirbaza dönüştürüldü (adres → ödeme → özet), kart ve havale bileşenleri eklendi, mobil düzen Tailwind ile çözüldü.\n**Kontrolcü:** 9 yeni test, BAŞARILI. Bir risk: havale seçeneğinde IBAN doğrulaması yok, Usta ekledi.\n**Yazıcı:** `docs/odeme-akisi.md` ve ekran görüntülü kısa rehber hazır.\n\nKalan: canlı ödeme sağlayıcısı anahtarı senden.',
+    activities: [
+      { tool: 'Agent', detail: 'görev veriyor: Usta · sihirbaz ve ödeme bileşenleri', at: now - 800000 },
+      { tool: 'Agent', detail: 'görev veriyor: Kontrolcü · test ve risk analizi', at: now - 500000 },
+      { tool: 'Agent', detail: 'görev veriyor: Yazıcı · dokümantasyon', at: now - 400000 }
+    ]
+  })
+
+  const d2 = store.createConversation({ kind: 'direct', agentId: A('mimar'), projectPath: proj })
+  store.appendMessage(d2.id, { id: 'm1', from: 'me', text: 'Projeyi tanı, eksikleri 5 maddede özetle.', at: now - 3600000 })
+  store.appendMessage(d2.id, { id: 'm2', from: 'agent', agentId: A('mimar'), at: now - 3500000, text: '1. Test kapsamı düşük (%31)\n2. API hata yanıtları tutarsız\n3. Ortam değişkenleri belgelenmemiş\n4. Mobil kırılma noktaları eksik\n5. CI yok', activities: [{ tool: 'Glob', detail: 'dosya arıyor: **/*.ts', at: now - 3550000 }] })
+
+  send('nav', { view: 'chat', id: d1.id })
+  await snap('01-sohbet')
+  send('nav', { view: 'chat', id: t1.id })
+  await snap('02-takim-odasi')
   send('nav', { view: 'team-new' })
-  await snap('team')
-  send('nav', { view: 'chat', id: demo.id })
+  await snap('03-takim-olustur')
+  send('nav', { view: 'team-close' })
   send('nav', { view: 'agents' })
-  await snap('agents')
+  await snap('04-ajanlar')
   send('nav', { view: 'settings' })
-  await snap('settings')
-  store.deleteConversation(demo.id)
+  await snap('05-ayarlar')
+  send('nav', { view: 'connections' })
+  await snap('06-baglantilar')
   app.quit()
 }
 

@@ -52,7 +52,7 @@ function dec(v: string): string | undefined {
 }
 
 class Store {
-  private dir = app.getPath('userData')
+  private dir = process.env.ZENTRA_USERDATA || app.getPath('userData')   // ZENTRA_USERDATA: demo/ekran görüntüsü için geçici klasör
   private file = join(this.dir, 'state.json')
   private data: Persisted
   private listeners = new Set<(s: AppState) => void>()
@@ -65,7 +65,7 @@ class Store {
 
   /** Eski "nudge" sürümünden durum dosyasını taşır. */
   private migrateFromNudge(): void {
-    if (existsSync(this.file)) return
+    if (existsSync(this.file) || process.env.ZENTRA_USERDATA) return
     const candidates = [join(app.getPath('appData'), 'Zentra Studio', 'state.json'), join(this.dir, 'nudge-state.json'), join(app.getPath('appData'), 'nudge', 'nudge-state.json')]
     for (const c of candidates) {
       if (existsSync(c)) { try { copyFileSync(c, this.file) } catch { /* yoksay */ } ; return }

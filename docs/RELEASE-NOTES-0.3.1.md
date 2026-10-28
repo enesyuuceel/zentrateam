@@ -2,6 +2,14 @@
 
 Ajan takımınla mesajlaşarak proje geliştir. Claude, OpenAI, Gemini, Ollama ve OpenRouter tek masaüstünde.
 
+## Görünüm
+
+![Takım odası](https://raw.githubusercontent.com/enesyuuceel/zentrateam/main/docs/screenshots/02-takim-odasi.png)
+
+![Birebir sohbet](https://raw.githubusercontent.com/enesyuuceel/zentrateam/main/docs/screenshots/01-sohbet.png)
+
+![Takım oluşturma](https://raw.githubusercontent.com/enesyuuceel/zentrateam/main/docs/screenshots/03-takim-olustur.png)
+
 ## Kurulum
 1. `Zentra-Agent-Team-Setup-0.3.1.exe` dosyasını indir ve çalıştır.
 2. Windows "bilgisayarınızı korudu" uyarısı verirse **Ek bilgi → Yine de çalıştır**. Dosya henüz dijital imzalı değil; doğrulamak için SHA-256 özetini `SHA256SUMS.txt` ile karşılaştır:

@@ -4,6 +4,24 @@ Ajan takımınla mesajlaşarak proje geliştir. Claude, OpenAI, Gemini, Ollama v
 
 Zentra Agent Team bilgisayarına kurduğun bir masaüstü uygulamasıdır. Sol tarafta **ajanlar** vardır (Mimar, Usta, Kontrolcü, Yazıcı ya da senin tanımladıkların). Bir ajana tıklayıp sohbeti açarsın, sohbeti bir **proje klasörüne** bağlarsın ve yazarsın. Ajan o klasörde çalışır: dosya okur, yazar, düzenler, komut çalıştırır ve sana mesajla rapor verir. Aynı sohbete yazdığın her mesaj **kaldığı yerden devam eder**.
 
+## Ekran görüntüleri
+
+| Birebir sohbet | Takım odası |
+|---|---|
+| ![Usta ile sohbet](docs/screenshots/01-sohbet.png) | ![Takım odası](docs/screenshots/02-takim-odasi.png) |
+
+| Takım oluşturma | Ajanlar |
+|---|---|
+| ![Üye seçimi](docs/screenshots/03-takim-olustur.png) | ![Ajanlar](docs/screenshots/04-ajanlar.png) |
+
+| Ayarlar ve sağlayıcılar | Bağlantılar |
+|---|---|
+| ![Ayarlar](docs/screenshots/05-ayarlar.png) | ![Bağlantılar](docs/screenshots/06-baglantilar.png) |
+
+## İndir
+
+Windows kurulum paketi: [Releases](https://github.com/enesyuuceel/zentrateam/releases) sayfasından `Zentra-Agent-Team-Setup-<sürüm>.exe`. Dosya henüz imzalı değil; SmartScreen uyarısında **Ek bilgi → Yine de çalıştır**. SHA-256 özeti aynı sayfadaki `SHA256SUMS.txt` içinde.
+
 ## Neler var
 
 - **Çoklu yapay zeka:** Her ajan ayrı bir sağlayıcıda çalışabilir. Claude (Agent SDK), OpenAI, Google Gemini, Ollama (yerel), OpenRouter ya da herhangi bir OpenAI-uyumlu sunucu (LM Studio, vLLM, Groq…).

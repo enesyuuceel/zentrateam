@@ -22,6 +22,7 @@ export function App(): React.JSX.Element {
 
   useEffect(() => window.nudge.onNav(n => {
     if (n.view === 'team-new') { setTeamDialog({ existing: null }); return }
+    if (n.view === 'team-close') { setTeamDialog(null); return }
     setView(n.view as View)
     if (n.id) setActiveId(n.id)
   }), [])
