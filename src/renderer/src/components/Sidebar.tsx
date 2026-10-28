@@ -2,6 +2,7 @@ import React from 'react'
 import type { AppState, Agent } from '../../../shared/types'
 import type { PresenceMap } from './useAppState'
 import { baseName } from '../lib/format'
+import { Avatar } from './Avatar'
 
 interface Props {
   state: AppState
@@ -20,8 +21,12 @@ export function Sidebar({ state, presence, activeId, onOpen }: Props): React.JSX
     const c = await window.nudge.createConversation({ kind: 'team', projectPath: null, title: `Takım Odası ${teams.length + 1}` })
     onOpen(c.id)
   }
-  const newDirect = async (a: Agent): Promise<void> => {
-    const c = await window.nudge.createConversation({ kind: 'direct', agentId: a.id, projectPath: null })
+  // Ajana tıklayınca varsa mevcut sohbet açılır; yeni sohbet için + düğmesi
+  const openDirect = async (a: Agent, forceNew = false): Promise<void> => {
+    const existing = forceNew ? undefined : directs.find(c => c.agentId === a.id)
+    if (existing) { onOpen(existing.id); return }
+    const n = directs.filter(c => c.agentId === a.id).length
+    const c = await window.nudge.createConversation({ kind: 'direct', agentId: a.id, projectPath: null, title: n ? `${a.name} ${n + 1}` : undefined })
     onOpen(c.id)
   }
   const del = (e: React.MouseEvent, id: string, title: string): void => {
@@ -32,7 +37,7 @@ export function Sidebar({ state, presence, activeId, onOpen }: Props): React.JSX
   return (
     <aside className="sidebar">
       <div className="top">
-        <h1>Nudge</h1>
+        <h1>Zentra<small>Studio</small></h1>
         <span className="sub">{busyCount ? `${busyCount} ajan çalışıyor` : `${agents.length} ajan hazır`}</span>
       </div>
       <div className="scroll">
@@ -56,7 +61,7 @@ export function Sidebar({ state, presence, activeId, onOpen }: Props): React.JSX
             const p = a ? presence[a.id]?.presence ?? 'online' : 'offline'
             return (
               <div key={c.id} className={`item ${activeId === c.id ? 'active' : ''}`} onClick={() => onOpen(c.id)}>
-                <span className="ico">{a?.avatar ?? '💬'}</span>
+                <Avatar agent={a} size={24} />
                 <span className="lbl">{c.title}<small>{baseName(c.projectPath)}</small></span>
                 <span className={`dot ${p}`} />
                 <button className="x" onClick={e => del(e, c.id, c.title)}>×</button>
@@ -71,10 +76,11 @@ export function Sidebar({ state, presence, activeId, onOpen }: Props): React.JSX
             const p = presence[a.id]?.presence ?? 'online'
             const st = presence[a.id]?.status
             return (
-              <div key={a.id} className="item" onClick={() => newDirect(a)} title={`${a.name} ile yeni sohbet`}>
-                <span className="ico" style={{ background: a.color + '33' }}>{a.avatar}</span>
+              <div key={a.id} className="item" onClick={() => openDirect(a)} title={`${a.name} ile sohbet`}>
+                <Avatar agent={a} size={24} />
                 <span className="lbl">{a.name}{a.isLead ? ' ·  lider' : ''}<small>{st ?? a.role}</small></span>
                 <span className={`dot ${p}`} />
+                <button className="x" title="Yeni sohbet aç" onClick={e => { e.stopPropagation(); openDirect(a, true) }}>+</button>
               </div>
             )
           })}
@@ -84,7 +90,7 @@ export function Sidebar({ state, presence, activeId, onOpen }: Props): React.JSX
         <div className="av">{settings.avatar}</div>
         <div style={{ minWidth: 0 }}>
           <div className="nm">{settings.displayName}</div>
-          <div className="st">{settings.hasApiKey ? 'Claude bağlı' : 'Hesap bağlı değil'}</div>
+          <div className="st">{settings.hasApiKey || state.providers.length ? `${(settings.hasApiKey ? 1 : 0) + state.providers.length} sağlayıcı bağlı` : 'Hesap bağlı değil'}</div>
         </div>
       </div>
     </aside>

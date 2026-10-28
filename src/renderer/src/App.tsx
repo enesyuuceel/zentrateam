@@ -6,6 +6,7 @@ import { AgentsView } from './views/AgentsView'
 import { ConnectionsView } from './views/ConnectionsView'
 import { SettingsView } from './views/SettingsView'
 import { sounds } from './lib/sounds'
+import { Logo } from './components/Logo'
 
 export type View = 'chat' | 'agents' | 'connections' | 'settings'
 
@@ -48,7 +49,7 @@ export function App(): React.JSX.Element {
       </div>
 
       <nav className="rail">
-        <div className="brand">N</div>
+        <div className="brand" title="Zentra Studio"><Logo size={40} /></div>
         <button className={view === 'chat' ? 'active' : ''} title="Sohbetler" onClick={() => setView('chat')}>💬</button>
         <button className={view === 'agents' ? 'active' : ''} title="Ajanlar" onClick={() => setView('agents')}>🧑‍🚀</button>
         <button className={view === 'connections' ? 'active' : ''} title="Bağlantılar" onClick={() => setView('connections')}>🔌</button>
@@ -60,11 +61,11 @@ export function App(): React.JSX.Element {
       <Sidebar state={state} presence={presence} activeId={view === 'chat' ? activeId : null} onOpen={openChat} />
 
       <main className="main">
-        {!state.settings.hasApiKey && view === 'chat' && (
+        {!state.settings.hasApiKey && state.providers.length === 0 && view === 'chat' && (
           <div className={`banner ${activeId ? '' : 'top'}`}>
             <div className="notice">
               <span>🔑</span>
-              <span>Claude hesabı bağlı değil. Ajanlar cevap veremez.</span>
+              <span>Hiçbir yapay zeka hesabı bağlı değil. Claude anahtarı gir ya da başka bir sağlayıcı ekle.</span>
               <button className="btn sm primary" onClick={() => setView('settings')}>Hesabı bağla</button>
             </div>
           </div>

@@ -1,8 +1,8 @@
 {
-  "name": "nudge",
-  "productName": "Nudge",
-  "version": "0.2.0",
-  "description": "Ajan takımınla mesajlaşarak proje geliştir. Eski messenger ruhu, yeni nesil ajanlar.",
+  "name": "zentra-studio",
+  "productName": "Zentra Studio",
+  "version": "0.3.0",
+  "description": "Ajan takımınla proje geliştir. Claude, OpenAI, Gemini, Ollama ve daha fazlası tek masaüstünde.",
   "main": "./out/main/index.js",
   "author": "Zentra Engine",
   "license": "MIT",
@@ -30,8 +30,8 @@
     "vite": "^7.0.0"
   },
   "build": {
-    "appId": "com.zentraengine.nudge",
-    "productName": "Nudge",
+    "appId": "com.zentraengine.studio",
+    "productName": "Zentra Studio",
     "directories": {
       "output": "release"
     },
@@ -43,7 +43,8 @@
       "node_modules/@anthropic-ai/**"
     ],
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "resources/icon.png"
     }
   },
   "allowScripts": {

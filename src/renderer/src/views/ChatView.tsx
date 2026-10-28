@@ -3,6 +3,7 @@ import type { AppState, ChatMessage, ToolActivity } from '../../../shared/types'
 import type { PresenceMap } from '../components/useAppState'
 import { baseName, fmtTime, renderLite } from '../lib/format'
 import { sounds } from '../lib/sounds'
+import { Avatar } from '../components/Avatar'
 
 interface Props {
   state: AppState
@@ -131,7 +132,7 @@ export function ChatView({ state, presence, conversationId, onOpen }: Props): Re
     const who = nameOf(m)
     rows.push(
       <div key={m.id} className={`m ${m.from}`}>
-        <div className="av" style={who.color ? { background: who.color + '33' } : undefined}>{who.avatar}</div>
+        {m.from === 'me' ? <div className="av">{who.avatar}</div> : <Avatar agent={agents.find(x => x.id === m.agentId) ?? lead} size={36} />}
         <div>
           <div className="hd"><b>{who.name}</b>{who.role && <span className="role">{who.role}</span>}<time>{fmtTime(m.at)}</time></div>
           <div className="body" dangerouslySetInnerHTML={{ __html: renderLite(m.text) }} />
@@ -150,7 +151,7 @@ export function ChatView({ state, presence, conversationId, onOpen }: Props): Re
   return (
     <>
       <div className="chat-head">
-        <div className={`av ${conv.kind === 'team' ? 'team' : ''}`}>{conv.kind === 'team' ? '👥' : lead?.avatar}</div>
+        {conv.kind === 'team' ? <div className="av team">👥</div> : <Avatar agent={lead} size={32} />}
         <div className="ttl">
           <div className="t">
             {editTitle !== null
@@ -173,7 +174,7 @@ export function ChatView({ state, presence, conversationId, onOpen }: Props): Re
       <div className="messages" ref={logRef}>
         {conv.messages.length === 0 && !busy && (
           <div className="empty" style={{ padding: '30px 0' }}>
-            <div className="big">{conv.kind === 'team' ? '👥' : lead?.avatar}</div>
+            <div className="big">{conv.kind === 'team' ? '👥' : <Avatar agent={lead} size={64} />}</div>
             <h2>{conv.kind === 'team' ? 'Takım odası' : lead?.name}</h2>
             <p>{conv.kind === 'team'
               ? `${lead?.name} işi bölüp ${members.filter(a => a!.id !== lead?.id).map(a => a!.name).join(', ')} ekibine dağıtır.`
@@ -188,7 +189,7 @@ export function ChatView({ state, presence, conversationId, onOpen }: Props): Re
           <div className="live">
             {live && (
               <div className="m agent">
-                <div className="av" style={lead?.color ? { background: lead.color + '33' } : undefined}>{lead?.avatar}</div>
+                <Avatar agent={lead} size={36} />
                 <div><div className="hd"><b>{lead?.name}</b><span className="role">yazıyor</span></div><div className="body" dangerouslySetInnerHTML={{ __html: renderLite(live) }} /></div>
               </div>
             )}

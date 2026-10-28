@@ -1,8 +1,11 @@
-// Ajan motoru: Claude Agent SDK ile her sohbeti kalıcı bir oturuma bağlar.
-// Bir sohbete yazılan her mesaj aynı session_id ile devam eder; ajan bağlamı hatırlar.
+// Ajan motoru. Her sohbet bir proje klasörüne ve kalıcı bir oturuma bağlıdır.
+// provider 'claude' → Claude Agent SDK (resume ile oturum); diğerleri → OpenAI-uyumlu araç döngüsü (geçmiş dosyada).
 import { query, type Options, type SDKMessage, type AgentDefinition, type McpServerConfig } from '@anthropic-ai/claude-agent-sdk'
 import { randomUUID } from 'crypto'
+import { existsSync, readFileSync } from 'fs'
+import { basename } from 'path'
 import { store } from './store'
+import { loadHistory, runOpenAiAgent, saveHistory } from './openaiAgent'
 import type { Agent, AgentEvent, ChatMessage, Connection, Conversation, Presence, ToolActivity } from '../shared/types'
 
 type Emit = (e: AgentEvent) => void
@@ -14,10 +17,47 @@ const MODEL_IDS: Record<Agent['model'], string> = {
 }
 
 const BASE_RULES = `
-Bu uygulamanın adı Nudge. Kullanıcı seninle bir messenger penceresinden konuşuyor; cevapların sohbet mesajı gibi kısa ve Türkçe olsun.
+Kullanıcı seninle bir takım sohbeti penceresinden konuşuyor; cevapların sohbet mesajı gibi kısa ve Türkçe olsun.
 Çalışma dizini bu sohbete bağlı proje klasörüdür. Dosya işlemlerini orada yap.
 Bir iş bittiğinde ne yaptığını 3-6 satırda özetle; uzun kod bloklarını mesaja yapıştırma, dosyaya yaz ve dosya adını söyle.
 Bir şey yapamıyorsan nedenini bir cümleyle söyle, yapabildiklerini bitir.`
+
+const MAX_REF_CHARS = 40_000
+
+/** Persona: dosya bağlıysa her çalıştırmada dosyadan okunur (Notepad'de düzenle, anında geçerli). */
+export function resolvePersona(a: Agent): string {
+  if (a.personaFile && existsSync(a.personaFile)) {
+    try {
+      const raw = readFileSync(a.personaFile, 'utf8')
+      return stripFrontmatter(raw).trim() || a.persona
+    } catch { /* dosya okunamazsa kayıtlı metin */ }
+  }
+  return a.persona
+}
+
+export function stripFrontmatter(s: string): string {
+  const m = /^---\r?\n[\s\S]*?\r?\n---\r?\n?/.exec(s)
+  return m ? s.slice(m[0].length) : s
+}
+
+function referenceFiles(a: Agent): string {
+  const parts: string[] = []
+  let budget = MAX_REF_CHARS
+  for (const f of a.files ?? []) {
+    if (!existsSync(f) || budget <= 0) continue
+    try {
+      let t = readFileSync(f, 'utf8')
+      if (t.length > budget) t = t.slice(0, budget) + '\n…[kesildi]'
+      budget -= t.length
+      parts.push(`### ${basename(f)}\n${t}`)
+    } catch { /* yoksay */ }
+  }
+  return parts.length ? `\n\nREFERANS DOSYALARIN (kullanıcı sana verdi, bunlara göre davran):\n${parts.join('\n\n')}` : ''
+}
+
+function agentPrompt(a: Agent): string {
+  return `${BASE_RULES}\n\nSENİN ROLÜN (${a.name}, ${a.role}):\n${resolvePersona(a)}${referenceFiles(a)}`
+}
 
 function toolSummary(name: string, input: Record<string, unknown>): string {
   const p = (k: string): string => String(input[k] ?? '')
@@ -67,15 +107,11 @@ export class AgentRunner {
     this.emit({ type: 'presence', agentId, presence, status })
   }
 
-  isRunning(conversationId: string): boolean {
-    return this.running.has(conversationId)
-  }
-
   cancel(conversationId: string): void {
     this.running.get(conversationId)?.abort()
   }
 
-  private buildOptions(conv: Conversation, lead: Agent, abort: AbortController): Options {
+  private buildClaudeOptions(conv: Conversation, lead: Agent, abort: AbortController): Options {
     const settings = store.settings
     const apiKey = store.getApiKey()
     const env: Record<string, string | undefined> = { ...process.env }
@@ -87,15 +123,16 @@ export class AgentRunner {
     }
 
     let agents: Record<string, AgentDefinition> | undefined
-    let appendPrompt = `${BASE_RULES}\n\nSENİN ROLÜN (${lead.name}, ${lead.role}):\n${lead.persona}`
+    let appendPrompt = agentPrompt(lead)
 
     if (conv.kind === 'team') {
-      const members = (conv.memberIds ?? []).map(id => store.getAgent(id)).filter((a): a is Agent => !!a && a.id !== lead.id)
+      const members = (conv.memberIds ?? []).map(id => store.getAgent(id))
+        .filter((a): a is Agent => !!a && a.id !== lead.id && a.provider === 'claude')
       agents = {}
       for (const m of members) {
         agents[m.id] = {
-          description: `${m.name} (${m.role}). ${m.persona.split('.')[0]}.`,
-          prompt: `${BASE_RULES}\n\nSENİN ROLÜN (${m.name}, ${m.role}):\n${m.persona}\nRaporunu "${m.name}:" diye başlayarak ver.`,
+          description: `${m.name} (${m.role}). ${resolvePersona(m).split('.')[0]}.`,
+          prompt: `${agentPrompt(m)}\nRaporunu "${m.name}:" diye başlayarak ver.`,
           model: m.model,
           effort: m.effort
         }
@@ -125,12 +162,13 @@ Büyük işleri parçala ve uygun ajana Agent aracıyla devret; küçük işleri
   async send(conversationId: string, text: string): Promise<void> {
     const conv = store.getConversation(conversationId)
     if (!conv) throw new Error('Sohbet bulunamadı')
-    if (this.running.has(conversationId)) throw new Error('Bu sohbette ajan hâlâ çalışıyor. Önce bitmesini bekle ya da iptal et.')
+    if (this.running.has(conversationId)) throw new Error('Bu sohbette ajan hâlâ çalışıyor. Önce bitmesini bekle ya da durdur.')
 
     const lead = conv.kind === 'team'
-      ? (conv.memberIds ?? []).map(id => store.getAgent(id)).find(a => a?.isLead) ?? store.getAgent(conv.memberIds?.[0] ?? '')
+      ? (conv.memberIds ?? []).map(id => store.getAgent(id)).find(a => a?.isLead && a.provider === 'claude')
+        ?? (conv.memberIds ?? []).map(id => store.getAgent(id)).find(a => a?.provider === 'claude')
       : store.getAgent(conv.agentId ?? '')
-    if (!lead) throw new Error('Ajan bulunamadı')
+    if (!lead) throw new Error(conv.kind === 'team' ? 'Takım odası için Claude ile çalışan en az bir ajan gerekir.' : 'Ajan bulunamadı')
 
     const mine: ChatMessage = { id: randomUUID(), from: 'me', text, at: Date.now() }
     store.appendMessage(conversationId, mine)
@@ -146,92 +184,136 @@ Büyük işleri parçala ve uygun ajana Agent aracıyla devret; küçük işleri
     let cost: number | undefined
     let finalText: string | null = null
 
-    const flush = (agentId: string): void => {
+    const flush = (): void => {
       const body = (finalText ?? buffer).trim()
       if (!body && activities.length === 0) return
       const msg: ChatMessage = {
-        id: randomUUID(), from: 'agent', agentId, text: body || '(sessizce bitirdi)', at: Date.now(),
+        id: randomUUID(), from: 'agent', agentId: lead.id, text: body || '(sessizce bitirdi)', at: Date.now(),
         activities: activities.length ? [...activities] : undefined, costUsd: cost
       }
       store.appendMessage(conversationId, msg)
       this.emit({ type: 'message', conversationId, message: msg })
-      buffer = ''
-      activities.length = 0
-      finalText = null
+      buffer = ''; activities.length = 0; finalText = null
+    }
+    const sys = (t: string): void => {
+      const m: ChatMessage = { id: randomUUID(), from: 'system', text: t, at: Date.now() }
+      store.appendMessage(conversationId, m)
+      this.emit({ type: 'message', conversationId, message: m })
     }
 
     try {
-      const q = query({ prompt: text, options: this.buildOptions(conv, lead, abort) })
-      for await (const m of q as AsyncIterable<SDKMessage>) {
-        if (m.type === 'system' && m.subtype === 'init') {
-          if (m.session_id && m.session_id !== conv.sessionId) {
-            store.updateConversation(conversationId, { sessionId: m.session_id })
-            this.emit({ type: 'session', conversationId, sessionId: m.session_id })
-          }
-          continue
-        }
-        if (m.type === 'stream_event') {
-          const ev = m.event as { type: string; delta?: { type: string; text?: string } }
-          if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta' && ev.delta.text && m.parent_tool_use_id === null) {
-            buffer += ev.delta.text
-            this.emit({ type: 'delta', conversationId, agentId: lead.id, text: ev.delta.text })
-          }
-          continue
-        }
-        if (m.type === 'assistant') {
-          const blocks = (m.message.content ?? []) as Array<{ type: string; name?: string; input?: Record<string, unknown>; text?: string }>
-          for (const b of blocks) {
-            if (b.type === 'tool_use' && b.name) {
-              const act: ToolActivity = { tool: b.name, detail: toolSummary(b.name, b.input ?? {}), at: Date.now() }
-              activities.push(act)
-              const who = m.agent_id && m.parent_tool_use_id ? lead.id : lead.id
-              this.emit({ type: 'activity', conversationId, agentId: who, activity: act })
-              this.setPresence(lead.id, 'busy', act.detail)
-            }
-          }
-          continue
-        }
-        if (m.type === 'result') {
-          cost = m.total_cost_usd
-          if (m.subtype === 'success' && !m.is_error) finalText = m.result
-          else if (m.subtype === 'success') {
-            const r = m.result || 'Bilinmeyen hata'
-            const loginHint = /not logged in|login|api key|authentication/i.test(r)
-              ? '\n\n🔑 Ajan Claude hesabına bağlanamadı. Ayarlar penceresinden bir Anthropic API anahtarı gir; ya da bilgisayara Claude Code kur ve `claude` ile giriş yap.'
-              : ''
-            finalText = `⚠️ ${r}${loginHint}`
-          } else {
-            const errs = 'errors' in m ? (m as { errors: string[] }).errors.join('; ') : (m as { subtype: string }).subtype
-            finalText = (buffer ? buffer + '\n\n' : '') + `⚠️ Tur hata ile bitti: ${errs}`
-          }
-          if (m.session_id && m.session_id !== store.getConversation(conversationId)?.sessionId) {
-            store.updateConversation(conversationId, { sessionId: m.session_id })
-            this.emit({ type: 'session', conversationId, sessionId: m.session_id })
-          }
-        }
+      if (lead.provider === 'claude') {
+        await this.runClaude(conv, lead, text, abort, {
+          onDelta: t => { buffer += t; this.emit({ type: 'delta', conversationId, agentId: lead.id, text: t }) },
+          onActivity: a => { activities.push(a); this.emit({ type: 'activity', conversationId, agentId: lead.id, activity: a }); this.setPresence(lead.id, 'busy', a.detail) },
+          onResult: (t, c) => { finalText = t; cost = c }
+        })
+      } else {
+        await this.runOther(conv, lead, text, abort, {
+          onDelta: t => { buffer += t; this.emit({ type: 'delta', conversationId, agentId: lead.id, text: t }) },
+          onActivity: a => { activities.push(a); this.emit({ type: 'activity', conversationId, agentId: lead.id, activity: a }); this.setPresence(lead.id, 'busy', a.detail) },
+          onResult: t => { finalText = t }
+        })
       }
-      flush(lead.id)
+      flush()
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       if (abort.signal.aborted) {
-        if (buffer) flush(lead.id)
-        const sys: ChatMessage = { id: randomUUID(), from: 'system', text: 'İşlem iptal edildi.', at: Date.now() }
-        store.appendMessage(conversationId, sys)
-        this.emit({ type: 'message', conversationId, message: sys })
+        if (buffer) flush()
+        sys('İşlem durduruldu.')
       } else {
         console.error('agent error', err)
         const hint = /api key|authentication|401|not logged in|login/i.test(msg)
-          ? ' Giriş yapılmamış görünüyor: Ayarlar penceresinden API anahtarı gir ya da bilgisayarda `claude` ile oturum aç.'
+          ? ' Hesap bağlı değil görünüyor: Ayarlar → Claude hesabı ya da Sağlayıcılar bölümünden anahtar gir.'
           : ''
         this.emit({ type: 'error', conversationId, error: msg + hint })
-        const sys: ChatMessage = { id: randomUUID(), from: 'system', text: `Hata: ${msg}${hint}`, at: Date.now() }
-        store.appendMessage(conversationId, sys)
-        this.emit({ type: 'message', conversationId, message: sys })
+        sys(`Hata: ${msg}${hint}`)
       }
     } finally {
       this.running.delete(conversationId)
       this.emit({ type: 'typing', conversationId, agentId: lead.id, on: false })
       this.setPresence(lead.id, 'online')
     }
+  }
+
+  private async runClaude(
+    conv: Conversation, lead: Agent, text: string, abort: AbortController,
+    h: { onDelta: (t: string) => void; onActivity: (a: ToolActivity) => void; onResult: (t: string, cost?: number) => void }
+  ): Promise<void> {
+    const conversationId = conv.id
+    let buffer = ''
+    const q = query({ prompt: text, options: this.buildClaudeOptions(conv, lead, abort) })
+    for await (const m of q as AsyncIterable<SDKMessage>) {
+      if (m.type === 'system' && m.subtype === 'init') {
+        if (m.session_id && m.session_id !== conv.sessionId) {
+          store.updateConversation(conversationId, { sessionId: m.session_id })
+          this.emit({ type: 'session', conversationId, sessionId: m.session_id })
+        }
+        continue
+      }
+      if (m.type === 'stream_event') {
+        const ev = m.event as { type: string; delta?: { type: string; text?: string } }
+        if (ev.type === 'content_block_delta' && ev.delta?.type === 'text_delta' && ev.delta.text && m.parent_tool_use_id === null) {
+          buffer += ev.delta.text
+          h.onDelta(ev.delta.text)
+        }
+        continue
+      }
+      if (m.type === 'assistant') {
+        const blocks = (m.message.content ?? []) as Array<{ type: string; name?: string; input?: Record<string, unknown> }>
+        for (const b of blocks) {
+          if (b.type === 'tool_use' && b.name) h.onActivity({ tool: b.name, detail: toolSummary(b.name, b.input ?? {}), at: Date.now() })
+        }
+        continue
+      }
+      if (m.type === 'result') {
+        if (m.subtype === 'success' && !m.is_error) h.onResult(m.result, m.total_cost_usd)
+        else if (m.subtype === 'success') {
+          const r = m.result || 'Bilinmeyen hata'
+          const loginHint = /not logged in|login|api key|authentication/i.test(r)
+            ? '\n\n🔑 Claude hesabına bağlanılamadı. Ayarlar → Claude hesabı bölümünden API anahtarı gir ya da bilgisayara Claude Code kurup `claude /login` yap.'
+            : ''
+          h.onResult(`⚠️ ${r}${loginHint}`, m.total_cost_usd)
+        } else {
+          const errs = 'errors' in m ? (m as { errors: string[] }).errors.join('; ') : (m as { subtype: string }).subtype
+          h.onResult((buffer ? buffer + '\n\n' : '') + `⚠️ Tur hata ile bitti: ${errs}`, m.total_cost_usd)
+        }
+        if (m.session_id && m.session_id !== store.getConversation(conversationId)?.sessionId) {
+          store.updateConversation(conversationId, { sessionId: m.session_id })
+          this.emit({ type: 'session', conversationId, sessionId: m.session_id })
+        }
+      }
+    }
+  }
+
+  private async runOther(
+    conv: Conversation, lead: Agent, text: string, abort: AbortController,
+    h: { onDelta: (t: string) => void; onActivity: (a: ToolActivity) => void; onResult: (t: string) => void }
+  ): Promise<void> {
+    const provider = store.getProvider(lead.provider)
+    if (!provider) throw new Error(`"${lead.name}" ajanının sağlayıcısı bulunamadı. Ayarlar → Sağlayıcılar bölümünden ekle ya da ajanı Claude'a al.`)
+    const apiKey = store.getProviderKey(provider.id)
+    if (!apiKey && provider.kind !== 'ollama' && provider.kind !== 'custom') throw new Error(`${provider.name} için API anahtarı girilmemiş (Ayarlar → Sağlayıcılar).`)
+    const model = lead.modelId?.trim() || provider.defaultModel
+    if (!model) throw new Error(`${provider.name} için model adı belirtilmemiş.`)
+
+    const key = conv.sessionId ?? randomUUID()
+    if (!conv.sessionId) {
+      store.updateConversation(conv.id, { sessionId: key })
+      this.emit({ type: 'session', conversationId: conv.id, sessionId: key })
+    }
+    const history = loadHistory(store.userDataDir, key)
+    const system = `${agentPrompt(lead)}\n\nAraçların var: list_dir, read_file, write_file, edit_file, search, run_command. Dosya yolları proje köküne göredir. Bir dosyayı değiştirmeden önce oku.${conv.projectPath ? `\nProje kökü: ${conv.projectPath}` : '\nProje klasörü seçilmedi; dosya işlemi yapma, sadece cevap ver.'}`
+
+    const out = await runOpenAiAgent({
+      provider, apiKey, model, system, history, userText: text,
+      cwd: conv.projectPath,
+      allowCommands: store.settings.permissionMode !== 'default',
+      signal: abort.signal,
+      onDelta: h.onDelta,
+      onActivity: h.onActivity
+    })
+    saveHistory(store.userDataDir, key, out.history)
+    h.onResult(out.text)
   }
 }

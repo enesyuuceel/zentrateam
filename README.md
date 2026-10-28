@@ -1,17 +1,19 @@
-# Nudge
+# Zentra Studio
 
-Ajan takımınla mesajlaşarak proje geliştir. Eski messenger ruhu, yeni nesil ajanlar.
+Ajan takımınla mesajlaşarak proje geliştir. Claude, OpenAI, Gemini, Ollama ve her OpenAI-uyumlu model tek masaüstünde.
 
-Nudge, bilgisayarına kurduğun bir masaüstü uygulamasıdır. Kişi listesinde insanlar yerine **ajanlar** vardır: Mimar, Usta, Kontrolcü, Yazıcı. Bir ajana çift tıklayıp sohbet penceresi açarsın, pencereyi bir **proje klasörüne** bağlarsın ve yazarsın. Ajan o klasörde çalışır, dosya düzenler, komut çalıştırır ve sana mesajla rapor verir. Aynı pencereye yazdığın her mesaj **kaldığı yerden devam eder**; ajan önceki konuşmayı hatırlar.
+Zentra Studio bilgisayarına kurduğun bir masaüstü uygulamasıdır. Sol tarafta **ajanlar** vardır (Mimar, Usta, Kontrolcü, Yazıcı ya da senin tanımladıkların). Bir ajana tıklayıp sohbeti açarsın, sohbeti bir **proje klasörüne** bağlarsın ve yazarsın. Ajan o klasörde çalışır: dosya okur, yazar, düzenler, komut çalıştırır ve sana mesajla rapor verir. Aynı sohbete yazdığın her mesaj **kaldığı yerden devam eder**.
 
 ## Neler var
 
-- **Kişi listesi:** ajanlar durumlarıyla görünür (çevrimiçi, meşgul). Meşgulken "kişisel ileti" alanında o an ne yaptığı yazar.
-- **Sohbet penceresi:** "Mimar diyor ki:" satırları, "Usta bir mesaj yazıyor…" göstergesi, ifadeler (`:)` `(Y)` `(L)` otomatik dönüşür), **Dürt** tuşu pencereyi sallar.
-- **Takım Odası:** lider ajan işi parçalar, diğer ajanlara alt görev olarak dağıtır, raporları birleştirir.
-- **Bağlantılar:** GitHub, Google Drive, ek klasör ya da herhangi bir MCP sunucusu. Eklediğin her bağlantı tüm ajanlara araç olarak verilir.
-- **Kalıcı oturum:** her sohbet bir Agent SDK oturum kimliği taşır. Proje klasörünü değiştirince ya da "Yeni oturum" deyince sıfırlanır.
-- **Kişiler:** ajan ekle, çıkar, karakterini ve modelini düzenle.
+- **Çoklu yapay zeka:** Her ajan ayrı bir sağlayıcıda çalışabilir. Claude (Agent SDK), OpenAI, Google Gemini, Ollama (yerel), OpenRouter ya da herhangi bir OpenAI-uyumlu sunucu (LM Studio, vLLM, Groq…).
+- **Dosyadan ajan:** Ajanın karakterini bir `.md` / `.txt` dosyasından yükle. Dosyaya "canlı bağlı" kalır; Notepad'de düzenlediğin her değişiklik bir sonraki mesajda geçerli olur. YAML ön bilgi (`name`, `role`/`description`) okunur.
+- **Referans dosyaları:** Ajana kural, stil rehberi, örnek kod gibi dosyalar ekle; içerikleri her mesajda ajana verilir.
+- **Kendi logosu:** Ajana PNG/JPG/SVG logo yükle.
+- **Takım Odası:** Lider ajan işi böler, diğer Claude ajanlarına alt görev olarak dağıtır, raporları birleştirir.
+- **Bağlantılar (MCP):** GitHub, Google Drive, ek klasör, özel MCP. Claude ajanlarına araç olarak verilir.
+- **Kalıcı oturum:** Claude ajanlarında Agent SDK oturumu, diğerlerinde yerel geçmiş dosyası. Proje klasörü değişince ya da "yeni oturum" deyince sıfırlanır.
+- **Tek sohbet:** Ajana tıklayınca mevcut sohbet açılır; yeni bir tane için yanındaki **+**.
 
 ## Kurulum
 
@@ -30,47 +32,45 @@ npm run dist
 
 Çıktı `release/` klasörüne düşer.
 
-## Claude hesabı
+## Hesap bağlama
 
-Nudge, Claude Agent SDK ile çalışır. İki yol var:
-
-1. **API anahtarı:** Ayarlar penceresinden `sk-ant-…` anahtarını gir. Şifreli saklanır.
-2. **Mevcut Claude Code oturumu:** bilgisayarda `claude` ile giriş yapılmışsa anahtar girmeden çalışır.
-
-## Bağlantılar
-
-| Bağlantı | Ne gerekir |
+| Sağlayıcı | Ne gerekir |
 |---|---|
-| GitHub | Personal Access Token. Resmi GitHub MCP sunucusu (HTTP) kullanılır. |
-| Google Drive | Google Cloud'da OAuth istemcisi, indirilen JSON dosyasının yolu. Topluluk MCP sunucusu. |
-| Ek klasör | Bir klasör yolu. |
-| Özel MCP | Komut + argümanlar ya da HTTP/SSE adresi. |
+| Claude | Ayarlar → Claude hesabı → Anthropic API anahtarı. Ya da bilgisayarda `claude /login` ile açılmış Claude Code oturumu. |
+| OpenAI | Ayarlar → Yapay zeka sağlayıcıları → OpenAI → API anahtarı |
+| Google Gemini | AI Studio anahtarı. OpenAI-uyumlu uç nokta kullanılır. |
+| Ollama | `ollama pull llama3.1` sonrası anahtarsız çalışır. |
+| OpenRouter | openrouter.ai anahtarı, model adı `sağlayıcı/model` biçiminde. |
+| Özel | OpenAI `/chat/completions` uyumlu her sunucu adresi. |
+
+Anahtarlar bu bilgisayarda Electron safeStorage ile şifreli saklanır.
 
 ## Nasıl çalışıyor
 
 ```
-Sohbet penceresi ──IPC──> Ana süreç (Electron)
-                            │
-                            ├── store.ts        JSON durum: ajanlar, sohbetler, bağlantılar, ayarlar
-                            └── agentRunner.ts  Claude Agent SDK query()
-                                                  cwd = proje klasörü
-                                                  resume = sohbetin session_id'si
-                                                  mcpServers = açık bağlantılar
-                                                  agents = takım odasında alt ajanlar
+Arayüz (React) ──IPC──> Ana süreç (Electron)
+                          ├── store.ts        JSON durum: ajanlar, sohbetler, bağlantılar, sağlayıcılar, ayarlar
+                          ├── agentRunner.ts  Sohbeti ajanın sağlayıcısına göre yönlendirir
+                          │     ├── claude  → Claude Agent SDK query() · cwd, resume, mcpServers, alt ajanlar
+                          │     └── diğer   → openaiAgent.ts
+                          └── openaiAgent.ts  OpenAI-uyumlu araç döngüsü: list_dir, read_file, write_file,
+                                              edit_file, search, run_command · geçmiş userData/sessions/
 ```
 
-Akan metin, araç kullanımı ("okuyor: README.md") ve sonuç, olay olarak pencereye düşer.
+Akan metin, araç kullanımı ("okuyor: README.md") ve sonuç, olay olarak arayüze düşer.
 
 ## Dizin yapısı
 
 ```
-src/main/       Electron ana süreç, depo, ajan motoru
+src/main/       Electron ana süreç, depo, ajan motorları
 src/preload/    Renderer'a açılan güvenli API
-src/renderer/   React arayüz (pencereler, bileşenler, tema)
+src/renderer/   React arayüz (görünümler, bileşenler, tema)
 src/shared/     Ortak tipler
+resources/      Logo (SVG) ve uygulama ikonu
+scripts/        make-icon.cjs: SVG'den icon.png üretir
 ```
 
-## Notlar
+## Sınırlar
 
-- Görünüm 2000'lerin messenger uygulamalarından esinlenir ama hiçbir orijinal ikon, ses ya da logo kullanılmaz; tümü bu projede çizildi ve üretildi.
-- Ajanlar varsayılan olarak dosya düzenlemelerini sormadan yapar (`acceptEdits`). Ayarlar'dan tam otonom ya da kısıtlı moda alınabilir.
+- Takım odası ve MCP bağlantıları şimdilik Claude ajanlarına özeldir. Diğer sağlayıcılar birebir sohbette tam araç setiyle çalışır.
+- Claude dışı ajanların geçmişi son 60 mesajla sınırlı tutulur.
