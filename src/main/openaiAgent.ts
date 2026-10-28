@@ -172,7 +172,7 @@ async function streamCompletion(input: RunInput, messages: OaiMessage[]): Promis
   const url = input.provider.baseUrl.replace(/\/+$/, '') + '/chat/completions'
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   if (input.apiKey) headers.Authorization = `Bearer ${input.apiKey}`
-  if (input.provider.kind === 'openrouter') { headers['HTTP-Referer'] = 'https://zentraengine.com'; headers['X-Title'] = 'Zentra Studio' }
+  if (input.provider.kind === 'openrouter') { headers['HTTP-Referer'] = 'https://zentraengine.com'; headers['X-Title'] = 'Zentra Agent Team' }
 
   const res = await fetch(url, {
     method: 'POST',

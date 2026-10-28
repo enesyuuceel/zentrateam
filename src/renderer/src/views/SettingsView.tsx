@@ -125,7 +125,7 @@ export function SettingsView({ state }: { state: AppState }): React.JSX.Element 
 
           <div className="card">
             <h3>Hakkında</h3>
-            <p className="desc"><b>Zentra Studio</b> 0.3.0 · Ajan takımınla proje geliştirme. Her sohbet bir proje klasörüne ve kalıcı bir oturuma bağlıdır.</p>
+            <p className="desc"><b>Zentra Agent Team</b> 0.3.1 · Ajan takımınla proje geliştirme. Her sohbet bir proje klasörüne ve kalıcı bir oturuma bağlıdır.</p>
           </div>
         </div>
       </div>

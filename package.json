@@ -1,8 +1,8 @@
 {
-  "name": "zentra-studio",
-  "productName": "Zentra Studio",
-  "version": "0.3.0",
-  "description": "Ajan takımınla proje geliştir. Claude, OpenAI, Gemini, Ollama ve daha fazlası tek masaüstünde.",
+  "name": "zentra-agent-team",
+  "productName": "Zentra Agent Team",
+  "version": "0.3.1",
+  "description": "Build projects by chatting with your agent team. Claude, OpenAI, Gemini, Ollama and more on one desktop.",
   "main": "./out/main/index.js",
   "author": "Zentra Engine",
   "license": "MIT",
@@ -30,8 +30,8 @@
     "vite": "^7.0.0"
   },
   "build": {
-    "appId": "com.zentraengine.studio",
-    "productName": "Zentra Studio",
+    "appId": "com.zentraengine.agentteam",
+    "productName": "Zentra Agent Team",
     "directories": {
       "output": "release"
     },

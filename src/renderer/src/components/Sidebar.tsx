@@ -37,7 +37,7 @@ export function Sidebar({ state, presence, activeId, onOpen }: Props): React.JSX
   return (
     <aside className="sidebar">
       <div className="top">
-        <h1>Zentra<small>Studio</small></h1>
+        <h1>Zentra<small>Agent Team</small></h1>
         <span className="sub">{busyCount ? `${busyCount} ajan çalışıyor` : `${agents.length} ajan hazır`}</span>
       </div>
       <div className="scroll">

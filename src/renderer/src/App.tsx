@@ -49,7 +49,7 @@ export function App(): React.JSX.Element {
       </div>
 
       <nav className="rail">
-        <div className="brand" title="Zentra Studio"><Logo size={40} /></div>
+        <div className="brand" title="Zentra Agent Team"><Logo size={40} /></div>
         <button className={view === 'chat' ? 'active' : ''} title="Sohbetler" onClick={() => setView('chat')}>💬</button>
         <button className={view === 'agents' ? 'active' : ''} title="Ajanlar" onClick={() => setView('agents')}>🧑‍🚀</button>
         <button className={view === 'connections' ? 'active' : ''} title="Bağlantılar" onClick={() => setView('connections')}>🔌</button>

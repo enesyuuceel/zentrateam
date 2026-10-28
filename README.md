@@ -1,8 +1,8 @@
-# Zentra Studio
+# Zentra Agent Team
 
 Ajan takımınla mesajlaşarak proje geliştir. Claude, OpenAI, Gemini, Ollama ve her OpenAI-uyumlu model tek masaüstünde.
 
-Zentra Studio bilgisayarına kurduğun bir masaüstü uygulamasıdır. Sol tarafta **ajanlar** vardır (Mimar, Usta, Kontrolcü, Yazıcı ya da senin tanımladıkların). Bir ajana tıklayıp sohbeti açarsın, sohbeti bir **proje klasörüne** bağlarsın ve yazarsın. Ajan o klasörde çalışır: dosya okur, yazar, düzenler, komut çalıştırır ve sana mesajla rapor verir. Aynı sohbete yazdığın her mesaj **kaldığı yerden devam eder**.
+Zentra Agent Team bilgisayarına kurduğun bir masaüstü uygulamasıdır. Sol tarafta **ajanlar** vardır (Mimar, Usta, Kontrolcü, Yazıcı ya da senin tanımladıkların). Bir ajana tıklayıp sohbeti açarsın, sohbeti bir **proje klasörüne** bağlarsın ve yazarsın. Ajan o klasörde çalışır: dosya okur, yazar, düzenler, komut çalıştırır ve sana mesajla rapor verir. Aynı sohbete yazdığın her mesaj **kaldığı yerden devam eder**.
 
 ## Neler var
 
