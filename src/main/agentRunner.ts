@@ -150,7 +150,7 @@ Büyük işleri parçala ve uygun ajana Agent aracıyla devret; küçük işleri
       permissionMode: settings.permissionMode,
       allowedTools: ['Read', 'Glob', 'Grep', 'WebSearch', 'WebFetch', 'Edit', 'Write', 'Bash', 'Agent', 'Task'],
       includePartialMessages: true,
-      settingSources: [],
+      settingSources: ['project'],   // proje klasöründeki CLAUDE.md ve .claude/ kuralları ajana verilir
       mcpServers,
       agents,
       env,
