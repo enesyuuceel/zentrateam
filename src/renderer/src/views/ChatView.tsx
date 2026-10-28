@@ -4,6 +4,7 @@ import type { PresenceMap } from '../components/useAppState'
 import { baseName, fmtTime, renderLite } from '../lib/format'
 import { sounds } from '../lib/sounds'
 import { Avatar } from '../components/Avatar'
+import { SessionPicker } from '../components/SessionPicker'
 
 interface Props {
   state: AppState
@@ -29,6 +30,7 @@ export function ChatView({ state, presence, conversationId, onOpen, onEditTeam }
   const [liveActs, setLiveActs] = useState<ToolActivity[]>([])
   const [error, setError] = useState<string | null>(null)
   const [editTitle, setEditTitle] = useState<string | null>(null)
+  const [pickSession, setPickSession] = useState(false)
   const logRef = useRef<HTMLDivElement>(null)
   const taRef = useRef<HTMLTextAreaElement>(null)
 
@@ -39,7 +41,7 @@ export function ChatView({ state, presence, conversationId, onOpen, onEditTeam }
   }, [conv, agents])
 
   useEffect(() => {
-    setBusy(false); setLive(''); setLiveActs([]); setError(null); setEditTitle(null)
+    setBusy(false); setLive(''); setLiveActs([]); setError(null); setEditTitle(null); setPickSession(false)
     if (!conversationId) return
     return window.nudge.onEvent(e => {
       if (!('conversationId' in e) || e.conversationId !== conversationId) return
@@ -151,6 +153,17 @@ export function ChatView({ state, presence, conversationId, onOpen, onEditTeam }
 
   return (
     <>
+      {pickSession && conv.projectPath && (
+        <SessionPicker
+          projectPath={conv.projectPath}
+          onClose={() => setPickSession(false)}
+          onPick={async s => {
+            if (conv.sessionId && !confirm('Bu sohbetin mevcut ajan hafızası seçilen Claude Code sohbetiyle değiştirilecek. Devam edilsin mi?')) return
+            await window.nudge.attachSession(conv.id, s.id, s.title)
+            setPickSession(false)
+          }}
+        />
+      )}
       <div className="chat-head">
         {conv.kind === 'team' ? <div className="av team">👥</div> : <Avatar agent={lead} size={32} />}
         <div className="ttl">
@@ -174,6 +187,7 @@ export function ChatView({ state, presence, conversationId, onOpen, onEditTeam }
         )}
         <span className={`chip ${conv.projectPath ? '' : 'warn'}`} onClick={pickProject} title={conv.projectPath ?? 'Proje klasörü seç'}>📁 {baseName(conv.projectPath)}</span>
         <span className={`chip muted ${conv.sessionId ? 'ok' : ''}`} title={conv.sessionId ? 'Ajan önceki mesajları hatırlıyor' : 'İlk mesajla oturum açılır'}>{conv.sessionId ? '● oturum sürüyor' : '○ yeni oturum'}</span>
+        {conv.projectPath && lead?.provider === 'claude' && <button className="ibtn" title="Bu projenin Claude Code sohbet geçmişini bağla" onClick={() => setPickSession(true)}>📜</button>}
         <button className="ibtn" title="Ajanın hafızasını sıfırla" onClick={reset}>↺</button>
         {conv.projectPath && <button className="ibtn" title="Klasörü aç" onClick={() => window.nudge.openPath(conv.projectPath!)}>↗</button>}
       </div>
@@ -188,6 +202,7 @@ export function ChatView({ state, presence, conversationId, onOpen, onEditTeam }
               : lead?.persona.split('.').slice(0, 2).join('.') + '.'}</p>
             <div className="grid">
               {SUGGESTIONS.map(s => <button key={s.t} onClick={() => setDraft(s.d)}><b>{s.t}</b>{s.d}</button>)}
+              {conv.projectPath && lead?.provider === 'claude' && <button onClick={() => setPickSession(true)}><b>📜 Geçmişi bağla</b>Bu projede daha önce Claude Code ile yaptığın sohbetten devam et.</button>}
             </div>
           </div>
         )}

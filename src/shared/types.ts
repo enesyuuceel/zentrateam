@@ -103,6 +103,15 @@ export type AgentEvent =
   | { type: 'error'; conversationId: string; error: string }
   | { type: 'nudge'; conversationId: string }
 
+export interface ClaudeSession {
+  id: string
+  title: string
+  startedAt: string | null
+  lastAt: string
+  turns: number
+  sizeKb: number
+}
+
 export interface AgentFileImport {
   path: string
   name?: string
@@ -121,6 +130,8 @@ export interface NudgeApi {
   updateTeam(id: string, input: { title: string; memberIds: string[]; leadId: string }): Promise<Conversation>
   deleteConversation(id: string): Promise<void>
   renameConversation(id: string, title: string): Promise<Conversation>
+  listClaudeSessions(projectPath: string): Promise<ClaudeSession[]>
+  attachSession(conversationId: string, sessionId: string, title: string): Promise<Conversation>
   openPath(path: string): Promise<string>
   setProjectPath(conversationId: string, path: string | null): Promise<Conversation>
   pickFolder(): Promise<string | null>

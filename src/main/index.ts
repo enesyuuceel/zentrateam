@@ -4,6 +4,8 @@ import { readFileSync } from 'fs'
 import { store } from './store'
 import { AgentRunner, stripFrontmatter } from './agentRunner'
 import { testProvider } from './openaiAgent'
+import { listClaudeSessions } from './claudeSessions'
+import { randomUUID } from 'crypto'
 import type { AgentEvent } from '../shared/types'
 
 const isDev = !app.isPackaged && !!process.env.ELECTRON_RENDERER_URL
@@ -69,6 +71,15 @@ ipcMain.handle('conv:updateTeam', (_e, id: string, input: { title: string; membe
   const c = store.getConversation(id)
   const leadChanged = c?.leadId !== input.leadId
   return store.updateConversation(id, { ...input, ...(leadChanged ? { sessionId: null } : {}) })
+})
+ipcMain.handle('claude:sessions', (_e, p: string) => listClaudeSessions(p))
+ipcMain.handle('conv:attachSession', (_e, id: string, sessionId: string, title: string) => {
+  runner.cancel(id)
+  const c = store.updateConversation(id, { sessionId })
+  const msg = { id: randomUUID(), from: 'system' as const, text: `Claude Code sohbeti bağlandı: "${title}". Ajan bu konuşmayı hatırlayarak devam eder.`, at: Date.now() }
+  store.appendMessage(id, msg)
+  send('agent:event', { type: 'message', conversationId: id, message: msg } satisfies AgentEvent)
+  return c
 })
 ipcMain.handle('conv:rename', (_e, id: string, title: string) => store.updateConversation(id, { title }))
 ipcMain.handle('conv:setProject', (_e, id: string, path: string | null) => store.updateConversation(id, { projectPath: path, sessionId: null }))
