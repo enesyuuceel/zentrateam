@@ -80,6 +80,7 @@ export function Sidebar({ state, presence, activeId, onOpen }: Props): React.JSX
                 <Avatar agent={a} size={24} />
                 <span className="lbl">{a.name}{a.isLead ? ' ·  lider' : ''}<small>{st ?? a.role}</small></span>
                 <span className={`dot ${p}`} />
+                <button className="plus" title="Sohbeti aç" onClick={e => { e.stopPropagation(); openDirect(a) }}>+</button>
               </div>
             )
           })}
