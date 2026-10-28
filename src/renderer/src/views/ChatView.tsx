@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import type { AppState, ChatMessage, ToolActivity } from '../../../shared/types'
+import type { AppState, ChatMessage, Conversation, ToolActivity } from '../../../shared/types'
 import type { PresenceMap } from '../components/useAppState'
 import { baseName, fmtTime, renderLite } from '../lib/format'
 import { sounds } from '../lib/sounds'
@@ -10,6 +10,7 @@ interface Props {
   presence: PresenceMap
   conversationId: string | null
   onOpen: (id: string) => void
+  onEditTeam: (conv: Conversation) => void
 }
 
 const SUGGESTIONS = [
@@ -19,7 +20,7 @@ const SUGGESTIONS = [
   { t: 'README yaz', d: 'Projeye kurulum ve kullanım anlatan bir README yaz.' }
 ]
 
-export function ChatView({ state, presence, conversationId, onOpen }: Props): React.JSX.Element {
+export function ChatView({ state, presence, conversationId, onOpen, onEditTeam }: Props): React.JSX.Element {
   const conv = state.conversations.find(c => c.id === conversationId)
   const agents = state.agents
   const [draft, setDraft] = useState('')
@@ -34,7 +35,7 @@ export function ChatView({ state, presence, conversationId, onOpen }: Props): Re
   const lead = useMemo(() => {
     if (!conv) return undefined
     if (conv.kind === 'direct') return agents.find(a => a.id === conv.agentId)
-    return (conv.memberIds ?? []).map(id => agents.find(a => a.id === id)).find(a => a?.isLead) ?? agents.find(a => a.id === conv.memberIds?.[0])
+    return (conv.leadId ? agents.find(a => a.id === conv.leadId) : undefined) ?? (conv.memberIds ?? []).map(id => agents.find(a => a.id === id)).find(a => a?.isLead) ?? agents.find(a => a.id === conv.memberIds?.[0])
   }, [conv, agents])
 
   useEffect(() => {
@@ -161,10 +162,16 @@ export function ChatView({ state, presence, conversationId, onOpen }: Props): Re
           </div>
           <div className="s">
             {conv.kind === 'team'
-              ? `${members.map(a => a!.name).join(' · ')}`
+              ? `${members.map(a => a!.name).join(' · ')} · lider ${lead?.name ?? '?'}`
               : (leadP?.status ?? lead?.role)}
           </div>
         </div>
+        {conv.kind === 'team' && (
+          <div className="members" title="Üyeleri düzenle" onClick={() => onEditTeam(conv)}>
+            {members.slice(0, 5).map(a => <Avatar key={a!.id} agent={a} size={26} />)}
+            {members.length > 5 && <span className="pill">+{members.length - 5}</span>}
+          </div>
+        )}
         <span className={`chip ${conv.projectPath ? '' : 'warn'}`} onClick={pickProject} title={conv.projectPath ?? 'Proje klasörü seç'}>📁 {baseName(conv.projectPath)}</span>
         <span className={`chip muted ${conv.sessionId ? 'ok' : ''}`} title={conv.sessionId ? 'Ajan önceki mesajları hatırlıyor' : 'İlk mesajla oturum açılır'}>{conv.sessionId ? '● oturum sürüyor' : '○ yeni oturum'}</span>
         <button className="ibtn" title="Ajanın hafızasını sıfırla" onClick={reset}>↺</button>

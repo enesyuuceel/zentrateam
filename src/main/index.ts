@@ -65,6 +65,11 @@ ipcMain.handle('auth:clearKey', () => store.clearApiKey())
 ipcMain.handle('chat:open', (_e, id: string) => send('nav', { view: 'chat', id }))
 ipcMain.handle('conv:create', (_e, input) => store.createConversation(input))
 ipcMain.handle('conv:delete', (_e, id: string) => { runner.cancel(id); store.deleteConversation(id) })
+ipcMain.handle('conv:updateTeam', (_e, id: string, input: { title: string; memberIds: string[]; leadId: string }) => {
+  const c = store.getConversation(id)
+  const leadChanged = c?.leadId !== input.leadId
+  return store.updateConversation(id, { ...input, ...(leadChanged ? { sessionId: null } : {}) })
+})
 ipcMain.handle('conv:rename', (_e, id: string, title: string) => store.updateConversation(id, { title }))
 ipcMain.handle('conv:setProject', (_e, id: string, path: string | null) => store.updateConversation(id, { projectPath: path, sessionId: null }))
 ipcMain.handle('dialog:pickFolder', async () => {
@@ -146,6 +151,9 @@ async function screenshotMode(dir: string): Promise<void> {
   store.appendMessage(demo.id, { id: 'd3', from: 'me', text: 'Evet, Yazıcı yazsın. Sen de package.json sürümünü 0.3.0 yap.', at: now - 5000 })
   send('nav', { view: 'chat', id: demo.id })
   await snap('chat')
+  send('nav', { view: 'team-new' })
+  await snap('team')
+  send('nav', { view: 'chat', id: demo.id })
   send('nav', { view: 'agents' })
   await snap('agents')
   send('nav', { view: 'settings' })

@@ -165,7 +165,8 @@ Büyük işleri parçala ve uygun ajana Agent aracıyla devret; küçük işleri
     if (this.running.has(conversationId)) throw new Error('Bu sohbette ajan hâlâ çalışıyor. Önce bitmesini bekle ya da durdur.')
 
     const lead = conv.kind === 'team'
-      ? (conv.memberIds ?? []).map(id => store.getAgent(id)).find(a => a?.isLead && a.provider === 'claude')
+      ? (conv.leadId ? store.getAgent(conv.leadId) : undefined)
+        ?? (conv.memberIds ?? []).map(id => store.getAgent(id)).find(a => a?.isLead && a.provider === 'claude')
         ?? (conv.memberIds ?? []).map(id => store.getAgent(id)).find(a => a?.provider === 'claude')
       : store.getAgent(conv.agentId ?? '')
     if (!lead) throw new Error(conv.kind === 'team' ? 'Takım odası için Claude ile çalışan en az bir ajan gerekir.' : 'Ajan bulunamadı')

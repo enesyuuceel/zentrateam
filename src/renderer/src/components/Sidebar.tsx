@@ -9,18 +9,16 @@ interface Props {
   presence: PresenceMap
   activeId: string | null
   onOpen: (id: string) => void
+  onNewTeam: () => void
 }
 
-export function Sidebar({ state, presence, activeId, onOpen }: Props): React.JSX.Element {
+export function Sidebar({ state, presence, activeId, onOpen, onNewTeam }: Props): React.JSX.Element {
   const { agents, conversations, settings } = state
   const teams = conversations.filter(c => c.kind === 'team')
   const directs = conversations.filter(c => c.kind === 'direct')
   const busyCount = agents.filter(a => presence[a.id]?.presence === 'busy').length
 
-  const newTeam = async (): Promise<void> => {
-    const c = await window.nudge.createConversation({ kind: 'team', projectPath: null, title: `Takım Odası ${teams.length + 1}` })
-    onOpen(c.id)
-  }
+  const newTeam = (): void => onNewTeam()
   // Ajana tıklayınca varsa mevcut sohbet açılır, yoksa bir tane oluşturulur
   const openDirect = async (a: Agent): Promise<void> => {
     const existing = directs.find(c => c.agentId === a.id)

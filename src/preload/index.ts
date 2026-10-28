@@ -10,6 +10,7 @@ const api: NudgeApi = {
   openChat: (id) => ipcRenderer.invoke('chat:open', id),
   createConversation: (input) => ipcRenderer.invoke('conv:create', input),
   deleteConversation: (id) => ipcRenderer.invoke('conv:delete', id),
+  updateTeam: (id, input) => ipcRenderer.invoke('conv:updateTeam', id, input),
   renameConversation: (id, title) => ipcRenderer.invoke('conv:rename', id, title),
   openPath: (p) => ipcRenderer.invoke('shell:openPath', p),
   setProjectPath: (id, path) => ipcRenderer.invoke('conv:setProject', id, path),

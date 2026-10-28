@@ -7,6 +7,8 @@ import { ConnectionsView } from './views/ConnectionsView'
 import { SettingsView } from './views/SettingsView'
 import { sounds } from './lib/sounds'
 import { Logo } from './components/Logo'
+import { TeamDialog } from './components/TeamDialog'
+import type { Conversation } from '../../shared/types'
 
 export type View = 'chat' | 'agents' | 'connections' | 'settings'
 
@@ -16,8 +18,10 @@ export function App(): React.JSX.Element {
   const [view, setView] = useState<View>('chat')
   const [activeId, setActiveId] = useState<string | null>(null)
   const [shaking, setShaking] = useState(false)
+  const [teamDialog, setTeamDialog] = useState<{ existing: Conversation | null } | null>(null)
 
   useEffect(() => window.nudge.onNav(n => {
+    if (n.view === 'team-new') { setTeamDialog({ existing: null }); return }
     setView(n.view as View)
     if (n.id) setActiveId(n.id)
   }), [])
@@ -58,7 +62,7 @@ export function App(): React.JSX.Element {
         <div className="me" title={state.settings.displayName} onClick={() => setView('settings')}>{state.settings.avatar}</div>
       </nav>
 
-      <Sidebar state={state} presence={presence} activeId={view === 'chat' ? activeId : null} onOpen={openChat} />
+      <Sidebar state={state} presence={presence} activeId={view === 'chat' ? activeId : null} onOpen={openChat} onNewTeam={() => setTeamDialog({ existing: null })} />
 
       <main className="main">
         {!state.settings.hasApiKey && state.providers.length === 0 && view === 'chat' && (
@@ -70,11 +74,23 @@ export function App(): React.JSX.Element {
             </div>
           </div>
         )}
-        {view === 'chat' && <ChatView state={state} presence={presence} conversationId={activeId} onOpen={openChat} />}
+        {view === 'chat' && <ChatView state={state} presence={presence} conversationId={activeId} onOpen={openChat} onEditTeam={c => setTeamDialog({ existing: c })} />}
         {view === 'agents' && <AgentsView state={state} presence={presence} onOpen={openChat} />}
         {view === 'connections' && <ConnectionsView state={state} />}
         {view === 'settings' && <SettingsView state={state} />}
       </main>
+      {teamDialog && (
+        <TeamDialog
+          agents={state.agents}
+          existing={teamDialog.existing}
+          onClose={() => setTeamDialog(null)}
+          onSave={async input => {
+            if (teamDialog.existing) await window.nudge.updateTeam(teamDialog.existing.id, input)
+            else { const c = await window.nudge.createConversation({ kind: 'team', projectPath: null, ...input }); openChat(c.id) }
+            setTeamDialog(null)
+          }}
+        />
+      )}
     </div>
   )
 }

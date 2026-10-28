@@ -52,6 +52,7 @@ export interface Conversation {
   kind: 'direct' | 'team'
   agentId?: string
   memberIds?: string[]
+  leadId?: string          // takıma özel lider; yoksa isLead işaretli ajan
   title: string
   projectPath: string | null
   sessionId: string | null   // Claude: Agent SDK oturumu. Diğer sağlayıcılar: geçmiş dosyası anahtarı
@@ -116,7 +117,8 @@ export interface NudgeApi {
   setApiKey(key: string): Promise<void>
   clearApiKey(): Promise<void>
   openChat(conversationId: string): Promise<void>
-  createConversation(input: { kind: 'direct' | 'team'; agentId?: string; memberIds?: string[]; projectPath: string | null; title?: string }): Promise<Conversation>
+  createConversation(input: { kind: 'direct' | 'team'; agentId?: string; memberIds?: string[]; leadId?: string; projectPath: string | null; title?: string }): Promise<Conversation>
+  updateTeam(id: string, input: { title: string; memberIds: string[]; leadId: string }): Promise<Conversation>
   deleteConversation(id: string): Promise<void>
   renameConversation(id: string, title: string): Promise<Conversation>
   openPath(path: string): Promise<string>

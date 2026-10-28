@@ -184,7 +184,7 @@ class Store {
   // --- Sohbetler ---
   get conversations(): Conversation[] { return this.data.conversations }
   getConversation(id: string): Conversation | undefined { return this.data.conversations.find(c => c.id === id) }
-  createConversation(input: { kind: 'direct' | 'team'; agentId?: string; memberIds?: string[]; projectPath: string | null; title?: string }): Conversation {
+  createConversation(input: { kind: 'direct' | 'team'; agentId?: string; memberIds?: string[]; leadId?: string; projectPath: string | null; title?: string }): Conversation {
     const now = Date.now()
     const agent = input.agentId ? this.getAgent(input.agentId) : undefined
     const conv: Conversation = {
@@ -192,6 +192,7 @@ class Store {
       kind: input.kind,
       agentId: input.agentId,
       memberIds: input.memberIds ?? (input.kind === 'team' ? this.data.agents.filter(a => a.provider === 'claude').map(a => a.id) : undefined),
+      leadId: input.leadId,
       title: input.title ?? (input.kind === 'team' ? 'Takım Odası' : agent?.name ?? 'Sohbet'),
       projectPath: input.projectPath,
       sessionId: null,

@@ -299,3 +299,36 @@ a { color: var(--accent); }
 
 .item .plus { width: 22px; height: 22px; border-radius: 7px; border: 1px solid var(--line-2); background: var(--bg-3); color: var(--text-2); cursor: pointer; font-size: 15px; line-height: 1; display: grid; place-items: center; flex: 0 0 auto; }
 .item .plus:hover { background: var(--accent); border-color: transparent; color: #fff; }
+
+/* ---------- Modal / takım diyaloğu ---------- */
+.modal-bg { position: fixed; inset: 0; background: rgba(5, 8, 14, .6); backdrop-filter: blur(4px); display: grid; place-items: center; z-index: 80; }
+.modal { width: 460px; max-width: calc(100vw - 40px); max-height: calc(100vh - 60px); background: var(--bg-2); border: 1px solid var(--line-2); border-radius: var(--r-lg); box-shadow: var(--shadow); display: flex; flex-direction: column; overflow: hidden; }
+.modal-head { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+.modal-head > div { flex: 1; }
+.modal-head h3 { margin: 0; font-size: 15px; }
+.modal-head small { color: var(--muted); font-size: 12px; }
+.modal .search { margin: 12px 16px 6px; border: 1px solid var(--line-2); border-radius: 10px; padding: 9px 12px; background: var(--bg-1); outline: none; }
+.modal .search:focus { border-color: var(--accent); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 12px 16px 0; }
+.chip-member { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px 3px 4px; border-radius: 999px; background: var(--accent-soft); color: var(--text); font-size: 12px; cursor: pointer; border: 1px solid rgba(109,140,255,.3); }
+.chip-member b { color: var(--muted); font-weight: 600; }
+.chip-member:hover b { color: var(--red); }
+.member-list { overflow: auto; padding: 6px 8px; display: flex; flex-direction: column; gap: 2px; max-height: 360px; }
+.member { display: flex; align-items: center; gap: 12px; padding: 8px 10px; border-radius: 10px; cursor: pointer; }
+.member:hover { background: var(--bg-3); }
+.member.on { background: var(--accent-soft); }
+.member.disabled { opacity: .45; cursor: not-allowed; }
+.member .nm { flex: 1; min-width: 0; }
+.member .nm b { display: block; font-size: 13.5px; }
+.member .nm small { color: var(--muted); font-size: 11.5px; }
+.check { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--line-2); display: grid; place-items: center; font-size: 13px; color: #fff; }
+.check.on { background: var(--accent); border-color: var(--accent); }
+.radio { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--line-2); position: relative; }
+.radio.on { border-color: var(--accent); }
+.radio.on::after { content: ''; position: absolute; inset: 3px; border-radius: 50%; background: var(--accent); }
+.modal-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 16px; border-top: 1px solid var(--line); margin-top: 8px; }
+.link-btn { background: none; border: none; color: var(--accent); cursor: pointer; padding: 0; text-decoration: underline; font-size: inherit; }
+.chat-head .members { display: flex; align-items: center; cursor: pointer; }
+.chat-head .members .av { margin-left: -8px; border: 2px solid var(--bg-1); }
+.chat-head .members .av:first-child { margin-left: 0; }
+.chat-head .members:hover .av { border-color: var(--accent); }
