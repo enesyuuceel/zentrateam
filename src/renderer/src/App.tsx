@@ -70,8 +70,8 @@ export function App(): React.JSX.Element {
           <div className={`banner ${activeId ? '' : 'top'}`}>
             <div className="notice">
               <span>🔑</span>
-              <span>Hiçbir yapay zeka hesabı bağlı değil. Claude anahtarı gir ya da başka bir sağlayıcı ekle.</span>
-              <button className="btn sm primary" onClick={() => setView('settings')}>Hesabı bağla</button>
+              <span>Hiçbir yapay zeka hesabı bağlı değil. Ücretsiz başlamak için Ayarlar → "Ücretsiz başla" (Gemini, Groq ya da Ollama).</span>
+              <button className="btn sm primary" onClick={() => setView('settings')}>Ücretsiz başla</button>
             </div>
           </div>
         )}

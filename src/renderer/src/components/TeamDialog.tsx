@@ -11,7 +11,7 @@ interface Props {
 
 /** WhatsApp tarzı grup oluşturma: üyeleri seç, ada ve lidere karar ver. */
 export function TeamDialog({ agents, existing, onClose, onSave }: Props): React.JSX.Element {
-  const claudeAgents = agents.filter(a => a.provider === 'claude')
+  const claudeAgents = agents
   const [step, setStep] = useState<1 | 2>(existing ? 2 : 1)
   const [q, setQ] = useState('')
   const [selected, setSelected] = useState<string[]>(existing?.memberIds ?? claudeAgents.map(a => a.id))
@@ -24,7 +24,6 @@ export function TeamDialog({ agents, existing, onClose, onSave }: Props): React.
   }, [agents, q])
 
   const toggle = (a: Agent): void => {
-    if (a.provider !== 'claude') return
     setSelected(sel => sel.includes(a.id) ? sel.filter(x => x !== a.id) : [...sel, a.id])
   }
   const selectedAgents = selected.map(id => agents.find(a => a.id === id)).filter((a): a is Agent => !!a)
@@ -64,7 +63,7 @@ export function TeamDialog({ agents, existing, onClose, onSave }: Props): React.
             <div className="member-list">
               {filtered.map(a => {
                 const on = selected.includes(a.id)
-                const disabled = a.provider !== 'claude'
+                const disabled = false
                 return (
                   <div key={a.id} className={`member ${on ? 'on' : ''} ${disabled ? 'disabled' : ''}`} onClick={() => toggle(a)} title={disabled ? 'Takım odası şimdilik Claude ajanlarıyla çalışır' : ''}>
                     <Avatar agent={a} size={36} />

@@ -5,7 +5,7 @@ import { randomUUID } from 'crypto'
 import { existsSync, readFileSync } from 'fs'
 import { basename } from 'path'
 import { store } from './store'
-import { loadHistory, runOpenAiAgent, saveHistory } from './openaiAgent'
+import { loadHistory, runOpenAiAgent, saveHistory, type Subagent } from './openaiAgent'
 import type { Agent, AgentEvent, ChatMessage, Connection, Conversation, Presence, ToolActivity } from '../shared/types'
 
 type Emit = (e: AgentEvent) => void
@@ -165,12 +165,11 @@ Büyük işleri parçala ve uygun ajana Agent aracıyla devret; küçük işleri
     if (!conv) throw new Error('Sohbet bulunamadı')
     if (this.running.has(conversationId)) throw new Error('Bu sohbette ajan hâlâ çalışıyor. Önce bitmesini bekle ya da durdur.')
 
+    const members = (conv.memberIds ?? []).map(id => store.getAgent(id)).filter((a): a is Agent => !!a)
     const lead = conv.kind === 'team'
-      ? (conv.leadId ? store.getAgent(conv.leadId) : undefined)
-        ?? (conv.memberIds ?? []).map(id => store.getAgent(id)).find(a => a?.isLead && a.provider === 'claude')
-        ?? (conv.memberIds ?? []).map(id => store.getAgent(id)).find(a => a?.provider === 'claude')
+      ? (conv.leadId ? store.getAgent(conv.leadId) : undefined) ?? members.find(a => a.isLead) ?? members[0]
       : store.getAgent(conv.agentId ?? '')
-    if (!lead) throw new Error(conv.kind === 'team' ? 'Takım odası için Claude ile çalışan en az bir ajan gerekir.' : 'Ajan bulunamadı')
+    if (!lead) throw new Error(conv.kind === 'team' ? 'Takım odasında üye yok. Başlıktaki üye avatarlarından ajan ekle.' : 'Ajan bulunamadı')
 
     const mine: ChatMessage = { id: randomUUID(), from: 'me', text, at: Date.now() }
     store.appendMessage(conversationId, mine)
@@ -288,16 +287,33 @@ Büyük işleri parçala ve uygun ajana Agent aracıyla devret; küçük işleri
     }
   }
 
+  private resolveOther(a: Agent): { provider: NonNullable<ReturnType<typeof store.getProvider>>; apiKey?: string; model: string } {
+    const provider = store.getProvider(a.provider)
+    if (!provider) throw new Error(`"${a.name}" ajanının sağlayıcısı bulunamadı. Ayarlar → Yapay zeka sağlayıcıları bölümünden ekle ya da ajanı başka sağlayıcıya al.`)
+    const apiKey = store.getProviderKey(provider.id)
+    if (!apiKey && provider.kind !== 'ollama' && provider.kind !== 'custom') throw new Error(`${provider.name} için API anahtarı girilmemiş (Ayarlar → Yapay zeka sağlayıcıları).`)
+    const model = a.modelId?.trim() || provider.defaultModel
+    if (!model) throw new Error(`${provider.name} için model adı belirtilmemiş.`)
+    return { provider, apiKey, model }
+  }
+
   private async runOther(
     conv: Conversation, lead: Agent, text: string, abort: AbortController,
     h: { onDelta: (t: string) => void; onActivity: (a: ToolActivity) => void; onResult: (t: string) => void }
   ): Promise<void> {
-    const provider = store.getProvider(lead.provider)
-    if (!provider) throw new Error(`"${lead.name}" ajanının sağlayıcısı bulunamadı. Ayarlar → Sağlayıcılar bölümünden ekle ya da ajanı Claude'a al.`)
-    const apiKey = store.getProviderKey(provider.id)
-    if (!apiKey && provider.kind !== 'ollama' && provider.kind !== 'custom') throw new Error(`${provider.name} için API anahtarı girilmemiş (Ayarlar → Sağlayıcılar).`)
-    const model = lead.modelId?.trim() || provider.defaultModel
-    if (!model) throw new Error(`${provider.name} için model adı belirtilmemiş.`)
+    const { provider, apiKey, model } = this.resolveOther(lead)
+
+    // Takım odası: Claude dışı lider, diğer Claude dışı üyelere "delegate" aracıyla görev verir
+    const subagents: Subagent[] = []
+    if (conv.kind === 'team') {
+      for (const m of (conv.memberIds ?? []).map(id => store.getAgent(id)).filter((a): a is Agent => !!a && a.id !== lead.id)) {
+        if (m.provider === 'claude') continue
+        try {
+          const r = this.resolveOther(m)
+          subagents.push({ id: m.id, name: m.name, role: m.role, system: `${agentPrompt(m)}\n\nAraçların: list_dir, read_file, write_file, edit_file, search, run_command. Görevi yap, sonunda kısa rapor ver.${conv.projectPath ? `\nProje kökü: ${conv.projectPath}` : ''}`, ...r })
+        } catch { /* yapılandırılmamış üye atlanır */ }
+      }
+    }
 
     const key = conv.sessionId ?? randomUUID()
     if (!conv.sessionId) {
@@ -305,10 +321,13 @@ Büyük işleri parçala ve uygun ajana Agent aracıyla devret; küçük işleri
       this.emit({ type: 'session', conversationId: conv.id, sessionId: key })
     }
     const history = loadHistory(store.userDataDir, key)
-    const system = `${agentPrompt(lead)}\n\nAraçların var: list_dir, read_file, write_file, edit_file, search, run_command. Dosya yolları proje köküne göredir. Bir dosyayı değiştirmeden önce oku.${conv.projectPath ? `\nProje kökü: ${conv.projectPath}` : '\nProje klasörü seçilmedi; dosya işlemi yapma, sadece cevap ver.'}`
+    const teamNote = subagents.length
+      ? `\n\nBu bir takım odası, sen lidersin. Takım arkadaşların: ${subagents.map(s => `${s.name} (agent_id: ${s.id}, ${s.role})`).join('; ')}. Büyük işi parçala, uygun parçayı "delegate" aracıyla devret, raporları kullanıcıya "**Ad:** özet" satırlarıyla ilet. Küçük işleri kendin yap.`
+      : ''
+    const system = `${agentPrompt(lead)}\n\nAraçların var: list_dir, read_file, write_file, edit_file, search, run_command${subagents.length ? ', delegate' : ''}. Dosya yolları proje köküne göredir. Bir dosyayı değiştirmeden önce oku.${conv.projectPath ? `\nProje kökü: ${conv.projectPath}` : '\nProje klasörü seçilmedi; dosya işlemi yapma, sadece cevap ver.'}${teamNote}`
 
     const out = await runOpenAiAgent({
-      provider, apiKey, model, system, history, userText: text,
+      provider, apiKey, model, system, history, userText: text, subagents,
       cwd: conv.projectPath,
       allowCommands: store.settings.permissionMode !== 'default',
       signal: abort.signal,

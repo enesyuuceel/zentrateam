@@ -29,6 +29,26 @@ export function SettingsView({ state }: { state: AppState }): React.JSX.Element 
     setEditing(null)
     flash('Sağlayıcı kaydedildi')
   }
+  // Ücretsiz başla: anahtarı al → yapıştır → sağlayıcı kaydedilir, tüm ajanlar ona geçer
+  const [freeKind, setFreeKind] = useState<'gemini' | 'groq' | 'ollama'>('gemini')
+  const [freeKey, setFreeKey] = useState('')
+  const [freeBusy, setFreeBusy] = useState(false)
+  const freePreset = presetFor(freeKind)
+  const startFree = async (): Promise<void> => {
+    if (freePreset.needsKey && !freeKey.trim()) return
+    setFreeBusy(true)
+    try {
+      const existing = state.providers.find(p => p.kind === freeKind)
+      const list = await window.nudge.saveProvider(existing ?? { id: '', kind: freeKind, name: freePreset.title.replace(/ \(.+\)$/, ''), baseUrl: freePreset.baseUrl, defaultModel: freePreset.defaultModel, hasKey: false }, freeKey.trim() || undefined)
+      const p = list.find(x => x.kind === freeKind)!
+      const r = await window.nudge.testProvider(p.id)
+      if (!r.ok) { flash('Bağlantı denemesi başarısız: ' + r.message.slice(0, 120)); return }
+      await window.nudge.useProviderForAll(p.id)
+      setFreeKey('')
+      flash(`Hazır: tüm ajanlar artık ${p.name} ile ücretsiz çalışıyor`)
+    } finally { setFreeBusy(false) }
+  }
+
   const test = async (id: string): Promise<void> => {
     setTestResult(r => ({ ...r, [id]: 'deneniyor…' }))
     const r = await window.nudge.testProvider(id)
@@ -40,9 +60,29 @@ export function SettingsView({ state }: { state: AppState }): React.JSX.Element 
       <div className="page-head"><h2>Ayarlar</h2></div>
       <div className="page">
         <div className="cards">
+          <div className="card free-card">
+            <h3>🎁 Ücretsiz başla</h3>
+            <p className="desc">Para ödemeden ajan takımını çalıştır. Bir sağlayıcı seç, ücretsiz anahtarı al, yapıştır; tüm ajanlar ona geçer. İstediğin zaman ajan bazında değiştirebilirsin.</p>
+            <div className="segment" style={{ marginBottom: 10 }}>
+              {(['gemini', 'groq', 'ollama'] as const).map(k => <button key={k} className={freeKind === k ? 'on' : ''} onClick={() => setFreeKind(k)}>{presetFor(k).icon} {presetFor(k).title}</button>)}
+            </div>
+            <p className="desc" style={{ marginBottom: 8 }}>{freePreset.help}</p>
+            {freePreset.needsKey ? (
+              <div className="field">
+                <label style={{ display: 'flex', gap: 8, alignItems: 'center' }}>{freePreset.title} API anahtarı {freePreset.keyUrl && <a href={freePreset.keyUrl} target="_blank" rel="noreferrer" style={{ marginLeft: 'auto', fontWeight: 500 }}>Anahtarı al ↗</a>}</label>
+                <input type="password" value={freeKey} onChange={e => setFreeKey(e.target.value)} placeholder="Anahtarı buraya yapıştır" />
+              </div>
+            ) : (
+              <div className="field"><a href={freePreset.keyUrl} target="_blank" rel="noreferrer">Ollama'yı indir ↗</a></div>
+            )}
+            <div className="actions">
+              <button className="btn primary" onClick={startFree} disabled={freeBusy || (freePreset.needsKey && !freeKey.trim())}>{freeBusy ? 'Deneniyor…' : 'Bağla ve tüm ajanları buna al'}</button>
+            </div>
+          </div>
+
           <div className="card">
-            <h3>Claude hesabı</h3>
-            <p className="desc">Varsayılan ajanlar Claude Agent SDK ile çalışır. Takım odası ve MCP bağlantıları Claude gerektirir.</p>
+            <h3>Claude hesabı <span className="pill">ücretli</span></h3>
+            <p className="desc">Claude, Agent SDK ile en güçlü araç setini (MCP bağlantıları, web arama) kullanır. API kullanımı kredi gerektirir; Claude Pro/Max aboneliğin varsa terminalde <code>claude /login</code> yapıp anahtarsız da kullanabilirsin.</p>
             {s.hasApiKey
               ? <div className="ok-box">API anahtarı kayıtlı.</div>
               : <div className="notice">Anahtar yok. Terminalde <code>npm i -g @anthropic-ai/claude-code</code> ve <code>claude /login</code> ile oturum aç ya da aşağıya anahtar gir.</div>}
@@ -68,9 +108,10 @@ export function SettingsView({ state }: { state: AppState }): React.JSX.Element 
             {state.providers.map(p => (
               <div key={p.id} className="list-row">
                 <div className="ic">{presetFor(p).icon}</div>
-                <div className="nm"><b>{p.name}</b> <span className="pill">{p.defaultModel || 'model yok'}</span>{p.hasKey ? '' : presetFor(p).needsKey ? <span className="pill" style={{ color: 'var(--amber)' }}>anahtar yok</span> : ''}
+                <div className="nm"><b>{p.name}</b> {presetFor(p).free && <span className="badge alt">ücretsiz</span>} <span className="pill">{p.defaultModel || 'model yok'}</span>{p.hasKey ? '' : presetFor(p).needsKey ? <span className="pill" style={{ color: 'var(--amber)' }}>anahtar yok</span> : ''}
                   <small>{p.baseUrl}{testResult[p.id] ? ` — ${testResult[p.id]}` : ''}</small></div>
                 <button className="btn sm ghost" onClick={() => test(p.id)}>Sına</button>
+                <button className="btn sm ghost" title="Tüm ajanları bu sağlayıcıya geçir" onClick={async () => { await window.nudge.useProviderForAll(p.id); flash(`Tüm ajanlar ${p.name} kullanıyor`) }}>Hepsini buna al</button>
                 <button className="btn sm ghost" onClick={() => setEditing({ p, preset: presetFor(p), key: '' })}>Düzenle</button>
                 <button className="btn sm ghost danger" onClick={() => { if (confirm(`${p.name} silinsin mi? Bu sağlayıcıyı kullanan ajanlar Claude'a alınır.`)) window.nudge.deleteProvider(p.id) }}>Sil</button>
               </div>

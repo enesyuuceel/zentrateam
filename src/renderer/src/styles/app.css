@@ -332,3 +332,5 @@ a { color: var(--accent); }
 .chat-head .members .av { margin-left: -8px; border: 2px solid var(--bg-1); }
 .chat-head .members .av:first-child { margin-left: 0; }
 .chat-head .members:hover .av { border-color: var(--accent); }
+
+.free-card { border-color: rgba(57,217,138,.35); background: linear-gradient(180deg, rgba(57,217,138,.07), var(--bg-2) 60%); }

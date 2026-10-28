@@ -30,6 +30,7 @@ const api: NudgeApi = {
   deleteConnection: (id) => ipcRenderer.invoke('conn:delete', id),
   saveProvider: (p, apiKey) => ipcRenderer.invoke('provider:save', p, apiKey),
   deleteProvider: (id) => ipcRenderer.invoke('provider:delete', id),
+  useProviderForAll: (id) => ipcRenderer.invoke('provider:useForAll', id),
   testProvider: (id) => ipcRenderer.invoke('provider:test', id),
   openWindow: (route) => ipcRenderer.invoke('window:open', route),
   onEvent: (cb) => {

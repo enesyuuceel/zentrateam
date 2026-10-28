@@ -161,13 +161,12 @@ export function AgentsView({ state, presence, onOpen }: { state: AppState; prese
                   <div className="color-pick">{COLORS.map(c => <span key={c} className={c === editing.color ? 'on' : ''} style={{ background: c }} onClick={() => setEditing({ ...editing, color: c })} />)}</div>
                 </div>
               </div>
-              {editing.provider === 'claude' && (
+              {(
                 <div className="field" style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                   <div className={`switch ${editing.isLead ? 'on' : ''}`} onClick={() => setEditing({ ...editing, isLead: !editing.isLead })} />
                   <label>Takım odasında lider: işi böler ve diğer ajanlara dağıtır</label>
                 </div>
               )}
-              {editing.provider !== 'claude' && <div className="notice">Claude dışı ajanlar birebir sohbette çalışır; takım odası ve MCP bağlantıları şimdilik Claude ajanlarına özeldir.</div>}
               <div className="actions">
                 <button className="btn ghost" onClick={() => { setEditing(null); setErr(null) }}>Vazgeç</button>
                 <button className="btn primary" onClick={save} disabled={!editing.name.trim()}>Kaydet</button>

@@ -22,6 +22,10 @@ Zentra Agent Team bilgisayarına kurduğun bir masaüstü uygulamasıdır. Sol t
 
 Windows kurulum paketi: [Releases](https://github.com/enesyuuceel/zentrateam/releases) sayfasından `Zentra-Agent-Team-Setup-<sürüm>.exe`. Dosya henüz imzalı değil; SmartScreen uyarısında **Ek bilgi → Yine de çalıştır**. SHA-256 özeti aynı sayfadaki `SHA256SUMS.txt` içinde.
 
+## Ücretsiz kullanım
+
+Ayarlar → **Ücretsiz başla** kartından Google Gemini, Groq ya da Ollama seç, ücretsiz anahtarı yapıştır (Ollama'da anahtar yok); tüm ajanlar o sağlayıcıya geçer. Takım odası da Claude olmadan çalışır: lider ajan işi `delegate` aracıyla takım arkadaşlarına dağıtır.
+
 ## Neler var
 
 - **Çoklu yapay zeka:** Her ajan ayrı bir sağlayıcıda çalışabilir. Claude (Agent SDK), OpenAI, Google Gemini, Ollama (yerel), OpenRouter ya da herhangi bir OpenAI-uyumlu sunucu (LM Studio, vLLM, Groq…).
@@ -91,5 +95,6 @@ scripts/        make-icon.cjs: SVG'den icon.png üretir
 
 ## Sınırlar
 
-- Takım odası ve MCP bağlantıları şimdilik Claude ajanlarına özeldir. Diğer sağlayıcılar birebir sohbette tam araç setiyle çalışır.
+- MCP bağlantıları (GitHub, Google Drive) şimdilik Claude ajanlarına özeldir.
+- Karışık takımlarda (Claude lider + diğerleri ya da tersi) lider yalnızca kendi motorundaki üyelere görev devreder.
 - Claude dışı ajanların geçmişi son 60 mesajla sınırlı tutulur.

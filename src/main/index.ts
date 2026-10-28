@@ -135,6 +135,7 @@ ipcMain.handle('file:imageDataUrl', (_e, p: string) => {
 })
 ipcMain.handle('provider:save', (_e, p, apiKey?: string) => store.saveProvider(p, apiKey))
 ipcMain.handle('provider:delete', (_e, id: string) => store.deleteProvider(id))
+ipcMain.handle('provider:useForAll', (_e, id: string) => store.useProviderForAll(id))
 ipcMain.handle('provider:test', (_e, id: string) => {
   const p = store.getProvider(id)
   if (!p) return { ok: false, message: 'Sağlayıcı bulunamadı' }

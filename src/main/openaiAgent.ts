@@ -13,7 +13,18 @@ export interface OaiMessage {
   tool_call_id?: string
 }
 
+export interface Subagent {
+  id: string
+  name: string
+  role: string
+  system: string
+  provider: Provider
+  apiKey?: string
+  model: string
+}
+
 export interface RunInput {
+  subagents?: Subagent[]          // doluysa lider "delegate" aracıyla görev devredebilir
   provider: Provider
   apiKey?: string
   model: string
@@ -43,6 +54,15 @@ const TOOLS = [
   { type: 'function', function: { name: 'search', description: 'Proje içinde metin arar (büyük/küçük harf duyarsız). Eşleşen dosya:satır listesini döner.', parameters: { type: 'object', properties: { query: { type: 'string' }, glob: { type: 'string', description: 'İsteğe bağlı uzantı filtresi, ör. .ts' } }, required: ['query'] } } },
   { type: 'function', function: { name: 'run_command', description: 'Proje klasöründe bir kabuk komutu çalıştırır (ör. npm test). 120 sn zaman aşımı. Çıktıyı döner.', parameters: { type: 'object', properties: { command: { type: 'string' } }, required: ['command'] } } }
 ]
+
+const DELEGATE_TOOL = {
+  type: 'function',
+  function: {
+    name: 'delegate',
+    description: 'Bir görevi takım arkadaşına devreder. Arkadaş görevi kendi araçlarıyla (dosya okuma/yazma, komut) yapar ve raporunu döner. agent_id listeden seçilir.',
+    parameters: { type: 'object', properties: { agent_id: { type: 'string' }, task: { type: 'string', description: 'Net, kendi başına anlaşılır görev tanımı; gerekli bağlamı da yaz.' } }, required: ['agent_id', 'task'] }
+  }
+}
 
 const SKIP_DIRS = new Set(['node_modules', '.git', 'dist', 'out', 'build', 'release', '.next', 'bin', 'obj'])
 
@@ -117,6 +137,19 @@ async function execTool(name: string, argsJson: string, input: RunInput): Promis
   try { a = JSON.parse(argsJson || '{}') } catch { return 'Hata: araç argümanları geçersiz JSON' }
   try {
     switch (name) {
+      case 'delegate': {
+        const m = (input.subagents ?? []).find(x => x.id === a.agent_id || x.name.toLowerCase() === String(a.agent_id).toLowerCase())
+        if (!m) return `Böyle bir takım arkadaşı yok. Seçenekler: ${(input.subagents ?? []).map(x => x.id).join(', ')}`
+        input.onActivity({ tool: 'delegate', detail: `${m.name} görevi aldı: ${String(a.task).slice(0, 70)}`, at: Date.now() })
+        const r = await runOpenAiAgent({
+          provider: m.provider, apiKey: m.apiKey, model: m.model, system: m.system, history: [], userText: a.task,
+          cwd: input.cwd, allowCommands: input.allowCommands, signal: input.signal,
+          onDelta: () => {},
+          onActivity: act => input.onActivity({ ...act, detail: `${m.name}: ${act.detail}` })
+        })
+        return `${m.name} raporu:
+${r.text || '(boş)'}`
+      }
       case 'list_dir': return listDir(input.cwd, a.path)
       case 'read_file': {
         const p = resolveIn(input.cwd, a.path)
@@ -159,6 +192,7 @@ function summarize(name: string, argsJson: string): string {
     case 'edit_file': return `düzenliyor: ${a.path}`
     case 'search': return `arıyor: ${a.query}`
     case 'run_command': return `komut çalıştırıyor: ${(a.command ?? '').slice(0, 80)}`
+    case 'delegate': return `görev devrediyor: ${a.agent_id}`
     default: return `${name} aracını kullanıyor`
   }
 }
@@ -178,7 +212,7 @@ async function streamCompletion(input: RunInput, messages: OaiMessage[]): Promis
     method: 'POST',
     headers,
     signal: input.signal,
-    body: JSON.stringify({ model: input.model, messages, tools: TOOLS, stream: true })
+    body: JSON.stringify({ model: input.model, messages, tools: input.subagents?.length ? [...TOOLS, DELEGATE_TOOL] : TOOLS, stream: true })
   })
   if (!res.ok || !res.body) {
     const body = await res.text().catch(() => '')
@@ -195,18 +229,20 @@ async function streamCompletion(input: RunInput, messages: OaiMessage[]): Promis
     if (!line.startsWith('data:')) return
     const data = line.slice(5).trim()
     if (!data || data === '[DONE]') return
-    let j: { choices?: Array<{ delta?: { content?: string; tool_calls?: Array<{ index: number; id?: string; function?: { name?: string; arguments?: string } }> } }>; error?: { message?: string } }
+    let j: { choices?: Array<{ delta?: { content?: string; tool_calls?: Array<{ index?: number; id?: string; function?: { name?: string; arguments?: string } }> } }>; error?: { message?: string } }
     try { j = JSON.parse(data) } catch { return }
     if (j.error?.message) throw new Error(j.error.message)
     const d = j.choices?.[0]?.delta
     if (!d) return
     if (d.content) { content += d.content; input.onDelta(d.content) }
     for (const tc of d.tool_calls ?? []) {
-      const cur = calls.get(tc.index) ?? { id: '', name: '', args: '' }
+      // Bazı sağlayıcılar (Gemini) index göndermez ve her çağrıyı tek parçada yollar
+      const idx = typeof tc.index === 'number' ? tc.index : (tc.id || tc.function?.name ? calls.size : Math.max(0, calls.size - 1))
+      const cur = calls.get(idx) ?? { id: '', name: '', args: '' }
       if (tc.id) cur.id = tc.id
-      if (tc.function?.name) cur.name += tc.function.name
+      if (tc.function?.name) cur.name = cur.name && typeof tc.index !== 'number' ? tc.function.name : cur.name + tc.function.name
       if (tc.function?.arguments) cur.args += tc.function.arguments
-      calls.set(tc.index, cur)
+      calls.set(idx, cur)
     }
   }
 
@@ -240,7 +276,7 @@ export async function runOpenAiAgent(input: RunInput): Promise<RunOutput> {
     }
     history.push({
       role: 'assistant',
-      content: r.content || null,
+      content: r.content || '',
       tool_calls: r.toolCalls.map(c => ({ id: c.id, type: 'function', function: { name: c.name, arguments: c.args } }))
     })
     for (const c of r.toolCalls) {

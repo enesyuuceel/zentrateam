@@ -3,7 +3,7 @@
 export type Presence = 'online' | 'busy' | 'away' | 'offline'
 
 /** Yapay zeka sağlayıcısı. 'claude' yerleşiktir (Claude Agent SDK); diğerleri OpenAI-uyumlu API ile çalışır. */
-export type ProviderKind = 'openai' | 'gemini' | 'ollama' | 'openrouter' | 'custom'
+export type ProviderKind = 'openai' | 'gemini' | 'groq' | 'ollama' | 'openrouter' | 'custom'
 
 export interface Provider {
   id: string
@@ -149,6 +149,7 @@ export interface NudgeApi {
   deleteConnection(id: string): Promise<Connection[]>
   saveProvider(p: Provider, apiKey?: string): Promise<Provider[]>
   deleteProvider(id: string): Promise<Provider[]>
+  useProviderForAll(id: string): Promise<Agent[]>
   testProvider(id: string): Promise<{ ok: boolean; message: string; models?: string[] }>
   openWindow(route: 'connections' | 'settings' | 'agents'): Promise<void>
   onEvent(cb: (e: AgentEvent) => void): () => void

@@ -148,6 +148,12 @@ class Store {
     this.persist()
     return this.data.providers
   }
+  /** Tüm ajanları verilen sağlayıcıya geçirir (model alanı sağlayıcının varsayılanına bırakılır). */
+  useProviderForAll(id: string): Agent[] {
+    for (const a of this.data.agents) { a.provider = id; a.modelId = '' }
+    this.persist()
+    return this.data.agents
+  }
   deleteProvider(id: string): Provider[] {
     this.data.providers = this.data.providers.filter(p => p.id !== id)
     if (this.data.encryptedProviderKeys) delete this.data.encryptedProviderKeys[id]
@@ -191,7 +197,7 @@ class Store {
       id: randomUUID(),
       kind: input.kind,
       agentId: input.agentId,
-      memberIds: input.memberIds ?? (input.kind === 'team' ? this.data.agents.filter(a => a.provider === 'claude').map(a => a.id) : undefined),
+      memberIds: input.memberIds ?? (input.kind === 'team' ? this.data.agents.map(a => a.id) : undefined),
       leadId: input.leadId,
       title: input.title ?? (input.kind === 'team' ? 'Takım Odası' : agent?.name ?? 'Sohbet'),
       projectPath: input.projectPath,
