@@ -24,13 +24,13 @@ npm install
 npm run dev
 ```
 
-Paketlemek için:
+Kurulum paketi (setup.exe) için:
 
 ```bash
 npm run dist
 ```
 
-Çıktı `release/` klasörüne düşer.
+Çıktı `release/Zentra-Agent-Team-Setup-<sürüm>.exe`. İmzalama, SmartScreen ve dağıtım adımları için [docs/KURULUM-PAKETI.md](docs/KURULUM-PAKETI.md).
 
 ## Hesap bağlama
 
